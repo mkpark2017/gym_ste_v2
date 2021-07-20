@@ -6,7 +6,7 @@ import numpy as np
 import os
 
 from evaluator import Evaluator
-from DDPG import DDPG
+from ddpg import DDPG
 from utils import *
 
 gym.undo_logger_setup()
