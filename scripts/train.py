@@ -4,23 +4,74 @@ import torch
 import gym
 import numpy as np
 
+from evaluator import Evaluator
 from DDPG import DDPG
 from utils import *
+
+gym.undo_logger_setup()
 
 def train(num_iterations, agent, env, evaluate, validate_steps, output, max_episode_length=None, debug=False):
     agent.is_training = True
     step = episode = episode_steps = 0
     episode_reward = 0.
-    observation = None
+    obs = None # Observation
     while step < num_iterations:
         #reset if it is the start of episode
-        if observation is None:
-        ######################## Bla Bla Bla
+        if obs is None:
+            obs = deepcopy(env.reset())
+            agent.reset(obs)
+        # Agent pick action
+        if step <= args.warmup:
+            action = agent.random_action()
+        else:
+            action = agent.select_action(obs)
+        # Env response with next_obs, reward, done, terminate_info
+        obs2, reward, done, info = env.step(action)
+        obs2 = deepcopy(obs2)
+        if max_episode_length and episode_steps >= max_episode_length -1:
+            done = True
+        # Agent observe and update policy
+        agent.observe(reward, obs2, done)
+        if step > args.warmup:
+            agent.update_policy()
+        # Evaluation
+        if evaluate is not None and validate_steps > 0 and step % valudate_steps == 0:
+            policy = lambda x: agent.select_action(x, decay_epsilon=False)
+            validate_reward = evaluate(env, policy, debug=False, visualize=False)
+            if debug: prYellow('[Evaluate] Step_{:07d}: mean_reward:{}'.format(step, validate_reward))
+        # Save intermediate model
+        if step % int(num_iterations/3) == 0:
+            agent.save_model(output)
+        # Update
+        step += 1
+        episode_steps = += 1
+        episode_reward = reward
+        obs = deepcopy(obs2)
+        
+        if done: # end of episode
+            if debug: prGreen('#{}: episode_reward:{} steps:{}'.format(episode,episode_reward,step))
+
+            agent.memory.append(
+                obs,
+                agent.select_action(obs),
+                0., False
+            )
+
+            # reset
+            obs = None
+            episode_steps = 0
+            episode_reward = 0.
+            episode += 1
+
 def test(num_episodes, agent, env, evaluate, model_path, visualize=True, debug=False):
     agent.load_weights(model_path)
     agent.is_training = False
     agent.eval()
-    ###################### Bla Bla Bla
+    policy = lambda x: agent.select_action(x, decay_epsilon=False)
+
+    for i in range(num_episodes):
+        validate_reward = evaluate(env, policy, debug=debug, visualize=visualize, save=False)
+        if debug: prYellow('[Evaluate] #{}: mean_reward:{}'.format(i, validate_reward))
 
 if __name__ == "__main__"
     parser = argparse.ArgumentParser(description='PyTorch DDPG')
@@ -33,7 +84,8 @@ if __name__ == "__main__"
     parser.add_argument('--rate', default=0.001, type=float, help='learning rate')
     parser.add_argument('--prate', default=0.0001, type=float, help='policy net learning rate (only for DDPG)')
     parser.add_argument('--warmup', default=100, type=int, help='time without training but only filling the replay memory')
-    parser.add_argument('--discount', default=0.99, type=float, help='')
+    parser.add_argument('--discount', default=0.99, type=float, help='Discount factor for next Q values')
+    parser.add_argument('--init_w', default=0.003, type=float, help='Initial network weight')
     # Set learning parameter
     parser.add_argument('--rmsize', default=10000, type=int, help='Memory size, after exceeding this limits, older entries will be replaced by newer ones')
     parser.add_argument('--bsize', default=64, type=int, help='minibatch size')
@@ -42,21 +94,23 @@ if __name__ == "__main__"
     parser.add_argument('--max_episode_length', default=300, type=int, help='Number of steps for each episode (num_episode = train_iter/max_episode_length')
     parser.add_argument('--validate_episodes', default=20, type=int, help='Number of episodes to perform validation')
     parser.add_argument('--validate_steps', default=2000, type=int, help='Validation step interval (only validate each validation step)')
-    # Random process for action (Gaussian process)
+    parser.add_argument('--epsilon', default=50000, type=int, help='linear decay of exploration policy')
+    # Random process for action (Gaussian-Markov process)
     parser.add_argument('--ou_theta', default=0.15, type=float, help='Noise theta')
     parser.add_argument('--ou_sigma', default=0.2, type=float, help='Noise sigma') 
     parser.add_argument('--ou_mu', default=0.0, type=float, help='Noise mu')
     # User convenience parameter
-    parser.add_argument('--output', default='output', type=str, help='output root')
-    parser.add_argument('--debug', dest='debug', action='store_true')
-    
+    parser.add_argument('--output', default='output', type=str, help='Output root')
+    parser.add_argument('--debug', dest='debug', action='store_true', help='Debug')
+    parser.add_argument('--seed', default=-1, type=int, help='Random seed')
+    parser.add_argument('--resume', default='default', type=str, help='Resuming model path for testing')
     args = parser.parse_args()
     
     args.output = get_output_folder(args.output, args.env)
     if args.resume == 'default'
         args.resume = 'output/{}-run0'.format(args.env)
 
-    env = gym.make('gym_ste:BasicSteEnv-v0')
+    env = gym.make(args.env)
 
     if args.seed > 0:
         np.random.seed(args.seed)
