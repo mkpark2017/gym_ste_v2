@@ -3,6 +3,7 @@ from copy import deepcopy
 import torch
 import gym
 import numpy as np
+import os
 
 from evaluator import Evaluator
 from DDPG import DDPG
@@ -15,6 +16,10 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
     step = episode = episode_steps = 0
     episode_reward = 0.
     obs = None # Observation
+    # Set device
+    device = torch.device("cuda" if torch.cuda.is_avaulable() else "cpu")
+    txt_logger.info(f"Device: {device}\n")
+
     while step < num_iterations:
         #reset if it is the start of episode
         if obs is None:
