@@ -19,7 +19,8 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
     # Set device
     device = torch.device("cuda" if torch.cuda.is_avaulable() else "cpu")
     txt_logger.info(f"Device: {device}\n")
-
+    if device == "cuda":
+        agent.cuda();
     while step < num_iterations:
         #reset if it is the start of episode
         if obs is None:
