@@ -1,28 +1,34 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.io import savemat
+from observation_processor import queue
 
-from util import *
+from utils import *
 
 class Evaluator(object):
 
-    def __init__(self, num_episodes, interval, save_path='', max_episode_length=None):
-        self.num_episodes = num_episodes
-        self.max_episode_length = max_episode_length
-        self.interval = interval
-        self.save_path = save_path
-        self.results = np.array([]).reshape(num_episodes,0)
+    def __init__(self, args):
+        self.num_episodes = args.validate_episodes
+        self.interval = args.validate_steps
+        self.max_episode_length = args.max_episode_length
+        self.window_length = args.window_length
+        self.save_path = args.output
+        self.results = np.array([]).reshape(self.num_episodes,0)
 
     def __call__(self, env, policy, debug=False, visualize=False, save=True):
 
         self.is_training = False
+        episode_memory = queue()
         observation = None
         result = []
 
         for episode in range(self.num_episodes):
 
             # reset at the start of episode
+            env.close()
             observation = env.reset()
+            episode_memory.append(observation)
+            observation = episode_memory.getObservation(self.window_length, observation)
             episode_steps = 0
             episode_reward = 0.
                 
@@ -33,8 +39,9 @@ class Evaluator(object):
             while not done:
                 # basic operation, action ,reward, blablabla ...
                 action = policy(observation)
-
                 observation, reward, done, info = env.step(action)
+                episode_memory.append(observation)
+                observation = episode_memory.getObservation(self.window_length, observation)
                 # Change the episode when episode_steps reach max_episode_length
                 if self.max_episode_length and episode_steps >= self.max_episode_length -1:
                     done = True
@@ -46,7 +53,9 @@ class Evaluator(object):
                 episode_reward += reward
                 episode_steps += 1
 
-            if debug: prYellow('[Evaluate] #Episode{}: episode_reward:{}'.format(episode,episode_reward))
+            if debug:
+                prRed('[Evaluate] #Episode{}: episode_reward:{}'.format(episode,episode_reward))
+#                env.close()
             result.append(episode_reward)
 
         result = np.array(result).reshape(-1,1)

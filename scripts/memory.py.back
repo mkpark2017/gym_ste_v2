@@ -132,7 +132,6 @@ class SequentialMemory(Memory):
             # index.
             batch_idxs = sample_batch_indexes(0, self.nb_entries - 1, size=batch_size)
         batch_idxs = np.array(batch_idxs) + 1
-#        print(batch_idxs)
         assert np.min(batch_idxs) >= 1
         assert np.max(batch_idxs) < self.nb_entries
         assert len(batch_idxs) == batch_size
@@ -141,28 +140,28 @@ class SequentialMemory(Memory):
         experiences = []
         for idx in batch_idxs:
             terminal0 = self.terminals[idx - 2] if idx >= 2 else False
-#            while terminal0:
+            while terminal0:
                 # Skip this transition because the environment was reset here. Select a new, random
                 # transition and use this instead. This may cause the batch to contain the same
                 # transition twice.
-#                idx = sample_batch_indexes(1, self.nb_entries, size=1)[0]
-#                terminal0 = self.terminals[idx - 2] if idx >= 2 else False
-#            assert 1 <= idx < self.nb_entries
+                idx = sample_batch_indexes(1, self.nb_entries, size=1)[0]
+                terminal0 = self.terminals[idx - 2] if idx >= 2 else False
+            assert 1 <= idx < self.nb_entries
 
             # This code is slightly complicated by the fact that subsequent observations might be
             # from different episodes. We ensure that an experience never spans multiple episodes.
             # This is probably not that important in practice but it seems cleaner.
             state0 = [self.observations[idx - 1]]
-#            for offset in range(0, self.window_length - 1):
-#                current_idx = idx - 2 - offset
-#                current_terminal = self.terminals[current_idx - 1] if current_idx - 1 > 0 else False
-#                if current_idx < 0 or (not self.ignore_episode_boundaries and current_terminal):
+            for offset in range(0, self.window_length - 1):
+                current_idx = idx - 2 - offset
+                current_terminal = self.terminals[current_idx - 1] if current_idx - 1 > 0 else False
+                if current_idx < 0 or (not self.ignore_episode_boundaries and current_terminal):
                     # The previously handled observation was terminal, don't add the current one.
                     # Otherwise we would leak into a different episode.
-#                    break
-#                state0.insert(0, self.observations[current_idx])
-#            while len(state0) < self.window_length:
-#                state0.insert(0, zeroed_observation(state0[0]))
+                    break
+                state0.insert(0, self.observations[current_idx])
+            while len(state0) < self.window_length:
+                state0.insert(0, zeroed_observation(state0[0]))
             action = self.actions[idx - 1]
             reward = self.rewards[idx - 1]
             terminal1 = self.terminals[idx - 1]
@@ -173,7 +172,7 @@ class SequentialMemory(Memory):
             state1 = [np.copy(x) for x in state0[1:]]
             state1.append(self.observations[idx])
 
-#            assert len(state0) == self.window_length
+            assert len(state0) == self.window_length
             assert len(state1) == len(state0)
             experiences.append(Experience(state0=state0, action=action, reward=reward,
                                           state1=state1, terminal1=terminal1))
@@ -195,9 +194,7 @@ class SequentialMemory(Memory):
             action_batch.append(e.action)
             terminal1_batch.append(0. if e.terminal1 else 1.)
 
-#        print(np.array(state1_batch))
-#        print(np.array(state1_batch).shape)
-#        print(state1_batch)
+        print(np.array(state1_batch))
 
         # Prepare and validate parameters.
         state0_batch = np.array(state0_batch).reshape(batch_size,-1)

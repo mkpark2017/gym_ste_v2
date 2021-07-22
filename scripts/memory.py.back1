@@ -60,6 +60,8 @@ class RingBuffer(object):
             raise RuntimeError()
         self.data[(self.start + self.length - 1) % self.maxlen] = v
 
+    def get_batch(self, idxs):
+        return self.data[(self.start + idxs) % self.maxlen]
 
 def zeroed_observation(observation):
     if hasattr(observation, 'shape'):
@@ -132,53 +134,25 @@ class SequentialMemory(Memory):
             # index.
             batch_idxs = sample_batch_indexes(0, self.nb_entries - 1, size=batch_size)
         batch_idxs = np.array(batch_idxs) + 1
-#        print(batch_idxs)
         assert np.min(batch_idxs) >= 1
         assert np.max(batch_idxs) < self.nb_entries
         assert len(batch_idxs) == batch_size
 
         # Create experiences
-        experiences = []
-        for idx in batch_idxs:
-            terminal0 = self.terminals[idx - 2] if idx >= 2 else False
-#            while terminal0:
-                # Skip this transition because the environment was reset here. Select a new, random
-                # transition and use this instead. This may cause the batch to contain the same
-                # transition twice.
-#                idx = sample_batch_indexes(1, self.nb_entries, size=1)[0]
-#                terminal0 = self.terminals[idx - 2] if idx >= 2 else False
-#            assert 1 <= idx < self.nb_entries
+        obs0_batch = self.observations0.get_batch(batch_idxs)
+        obs1_batch = self.observations1.get_batch(batch_idxs)
+        action_batch = self.actions.get_batch(batch_idxs)
+        reward_batch = self.rewards.get_batch(batch_idxs)
+        terminal1_batch = self.terminals1.get_batch(batch_idxs)
 
-            # This code is slightly complicated by the fact that subsequent observations might be
-            # from different episodes. We ensure that an experience never spans multiple episodes.
-            # This is probably not that important in practice but it seems cleaner.
-            state0 = [self.observations[idx - 1]]
-#            for offset in range(0, self.window_length - 1):
-#                current_idx = idx - 2 - offset
-#                current_terminal = self.terminals[current_idx - 1] if current_idx - 1 > 0 else False
-#                if current_idx < 0 or (not self.ignore_episode_boundaries and current_terminal):
-                    # The previously handled observation was terminal, don't add the current one.
-                    # Otherwise we would leak into a different episode.
-#                    break
-#                state0.insert(0, self.observations[current_idx])
-#            while len(state0) < self.window_length:
-#                state0.insert(0, zeroed_observation(state0[0]))
-            action = self.actions[idx - 1]
-            reward = self.rewards[idx - 1]
-            terminal1 = self.terminals[idx - 1]
-
-            # Okay, now we need to create the follow-up state. This is state0 shifted on timestep
-            # to the right. Again, we need to be careful to not include an observation from the next
-            # episode if the last state is terminal.
-            state1 = [np.copy(x) for x in state0[1:]]
-            state1.append(self.observations[idx])
-
-#            assert len(state0) == self.window_length
-            assert len(state1) == len(state0)
-            experiences.append(Experience(state0=state0, action=action, reward=reward,
-                                          state1=state1, terminal1=terminal1))
-        assert len(experiences) == batch_size
-        return experiences
+        result = {
+            'obs0': obs0_batch,
+            'obs1': obs1_batch,
+            'rewards': array_min2d(reward_batch),
+            'actions': array_min2d(action_batch),
+            'terminals1': array_min2d(terminal1_batch),
+        }
+        return result
 
     def sample_and_split(self, batch_size, batch_idxs=None):
         experiences = self.sample(batch_size, batch_idxs)
@@ -195,9 +169,7 @@ class SequentialMemory(Memory):
             action_batch.append(e.action)
             terminal1_batch.append(0. if e.terminal1 else 1.)
 
-#        print(np.array(state1_batch))
-#        print(np.array(state1_batch).shape)
-#        print(state1_batch)
+        print(np.array(state1_batch))
 
         # Prepare and validate parameters.
         state0_batch = np.array(state0_batch).reshape(batch_size,-1)

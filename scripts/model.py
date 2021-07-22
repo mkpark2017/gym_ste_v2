@@ -14,6 +14,7 @@ def fanin_init(size, fanin=None):
 class Actor(nn.Module):
     def __init__(self, nb_states, nb_actions, hidden1=400, hidden2=300, init_w=3e-3):
         super(Actor, self).__init__()
+#        print(nb_states)
         self.fc1 = nn.Linear(nb_states, hidden1)
         self.fc2 = nn.Linear(hidden1, hidden2)
         self.fc3 = nn.Linear(hidden2, nb_actions)
@@ -23,11 +24,14 @@ class Actor(nn.Module):
     
     def init_weights(self, init_w):
         self.fc1.weight.data = fanin_init(self.fc1.weight.data.size())
+#        print(self.fc1.weight.data.size())
         self.fc2.weight.data = fanin_init(self.fc2.weight.data.size())
         self.fc3.weight.data.uniform_(-init_w, init_w)
     
     def forward(self, x):
+#        print(x.shape)
         out = self.fc1(x)
+#        print(out.shape)
         out = self.relu(out)
         out = self.fc2(out)
         out = self.relu(out)

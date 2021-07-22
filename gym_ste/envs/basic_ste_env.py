@@ -45,24 +45,25 @@ class BasicSteEnv(gym.Env):
     def __init__(self):
         self.debug = False
         # define the environment and the observations
-        self.court_lx = 255		# the size of the environment
-        self.court_ly = 255		# the size of the environment
-        self.max_step = 300
+        self.court_lx = 55		# the size of the environment
+        self.court_ly = 55		# the size of the environment
+        self.max_step = 150
         self.delta_t = 1		# 1sec
         self.agent_v = 3		# 3m/s
         self.gas_d = 10 		# diffusivity [10m^2/s]
         self.gas_t = 1000 		# gas life time [1000sec]
         self.gas_q = 2000		# gas strength
-        self.wind_mean_phi = 310        # mean wind direction
+        self.wind_mean_phi = 310        # mean wind direction [degree]
+        self.wind_mean_speed = 2
         self.dur_t = 0			# duration time of out of plume
         self.last_x = -1		# last sensing position x
         self.last_y = -1		# last sensing position y
         self.last_action = 0;		# last action
-#        self.gas_measure = -1;
+        self.gas_measure = -1;
 
         # not normalize [local flow velocity (x,y) [m/s], last sampling location (x,y), t-t_last, last action (only direction)
-        self.obs_low_state = np.array([-np.inf, -np.inf, 0, 0,  0, -math.pi])
-        self.obs_high_state = np.array([np.inf,	np.inf,	self.court_lx,	self.court_ly,	self.max_step,	math.pi])
+        self.obs_low_state = np.array([-np.inf, -np.inf, 0, 0,  0, -1, 0])
+        self.obs_high_state = np.array([np.inf,	np.inf,	self.court_lx,	self.court_ly,	self.max_step,	1, np.inf])
         self.observation_space = spaces.Box(self.obs_low_state, self.obs_high_state, dtype=np.float32)
 
         # Action space should be bounded between (-1,1)
@@ -76,7 +77,7 @@ class BasicSteEnv(gym.Env):
         self.action_space = spaces.Box(np.array([self.action_angle_low]), np.array([self.action_angle_high]), dtype=np.float32)
 
         self.count_actions = 0  # count actions for rewarding
-        self.eps = 0.02*self.court_lx  # distance to goal, that has to be reached to solve env
+        self.eps = 0.1*self.court_lx  # distance to goal, that has to be reached to solve env
         self.np_random = None  # random generator
 
         # agent
@@ -106,8 +107,12 @@ class BasicSteEnv(gym.Env):
         return math.sqrt(pow((self.goal_x - pose_x), 2) + pow(self.goal_y - pose_y, 2))
 
     def _wind_sensor(self):
-        wind_dir = self.np_random.uniform(low=(self.wind_mean_phi-15)*math.pi/180, high=(self.wind_mean_phi+15)*math.pi/180)
-        wind_speed = self.np_random.uniform(low=1.9, high=2.1)
+        wind_degree_fluc = 1.5 #degree
+        wind_speed_fluc = 0.1
+        wind_dir = self.np_random.uniform(low=(self.wind_mean_phi-wind_degree_fluc)*math.pi/180, 
+                                         high=(self.wind_mean_phi+wind_degree_fluc)*math.pi/180)
+        wind_speed = self.np_random.uniform(low=self.wind_mean_speed-wind_speed_fluc, 
+                                            high=self.wind_mean_speed+wind_speed_fluc)
         return wind_dir, wind_speed
 
     #  extra rewarding reaching the goal and learning to do this by few steps as possible
@@ -128,8 +133,8 @@ class BasicSteEnv(gym.Env):
         return conc
 
     def _gas_measure(self, pos_x, pos_y):
-        env_sig = 0.4
-        sensor_sig_m = 0.2;
+        env_sig = 0. #0.4
+        sensor_sig_m = 0. #0.2;
         conc = self._gas_conc(self.agent_x, self.agent_y)
         conc_env = self.np_random.normal(conc,env_sig)
         while conc_env < 0:
@@ -141,9 +146,9 @@ class BasicSteEnv(gym.Env):
         return gas_measure
 
     def _step_reward(self):
-        gas_measure = self._gas_measure(self.agent_x, self.agent_y)
+#        self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
 #        print(gas_measure)
-        if gas_measure > 1: # need to be adjusted for different source condition
+        if self.gas_measure > 0.3: # need to be adjusted for different source condition
             reward = 1
             self.dur_t = 1
         else:
@@ -159,8 +164,12 @@ class BasicSteEnv(gym.Env):
         wind_y = math.sin(self.wind_d + math.pi/2)*self.wind_s
 #        print(str(self.last_action) + "\n")
 #        print("OBS   wind_x:" + str(wind_x) + "wind_y:" + str(wind_y) + "last_x:" + str(self.last_x) )
+        self.last_x = self.agent_x
+        self.last_y = self.agent_y
 
-        return np.array([wind_x, wind_y, self.last_x, self.last_y, self.dur_t, self.last_action])
+        self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
+
+        return np.array([float(wind_x), float(wind_y), float(self.last_x), float(self.last_y), float(self.dur_t), float(self.last_action), float(self.gas_measure)])
 
 #    def _normalize_observation(self, obs):
 #        normalized_obs = []
@@ -233,19 +242,24 @@ class BasicSteEnv(gym.Env):
         self.count_actions = 0
         self.positions = []
         # set initial state randomly
-        self.agent_x = self.np_random.uniform(low=0, high=self.court_lx)
-        self.agent_y = self.np_random.uniform(low=0, high=self.court_ly)
-        # self.agent_x = 100
-        # self.agent_y = 200
-        self.goal_x = self.np_random.uniform(low=0, high=self.court_lx)
-        self.goal_y = self.np_random.uniform(low=0, high=self.court_lx)
-        # self.goal_x = 125.5
-        # self.goal_y = 225.5
+        # self.agent_x = self.np_random.uniform(low=0, high=self.court_lx)
+        # self.agent_y = self.np_random.uniform(low=0, high=self.court_ly)
+        self.agent_x = 5
+        self.agent_y = 10
+        # self.goal_x = self.np_random.uniform(low=0, high=self.court_lx)
+        # self.goal_y = self.np_random.uniform(low=0, high=self.court_lx)
+        self.goal_x = 45.5
+        self.goal_y = 45.5
 
-        self.gas_d = self.np_random.uniform(low=0, high=20)                # diffusivity [10m^2/s]
-        self.gas_t = self.np_random.uniform(low=500, high=1500)            # gas life time [1000sec]
-        self.gas_q = self.np_random.uniform(low=1500, high=2500)           # gas strength
-        self.wind_mean_phi = self.np_random.uniform(low=0, high=360)        # mean wind direction
+        # self.gas_d = self.np_random.uniform(low=0, high=20)                # diffusivity [10m^2/s]
+        # self.gas_t = self.np_random.uniform(low=500, high=1500)            # gas life time [1000sec]
+        # self.gas_q = self.np_random.uniform(low=1500, high=2500)           # gas strength
+        # self.wind_mean_phi = self.np_random.uniform(low=0, high=360)        # mean wind direction
+        self.gas_d = 10                 # diffusivity [10m^2/s]
+        self.gas_t = 1000               # gas life time [1000sec]
+        self.gas_q = 2000               # gas strength
+        self.wind_mean_phi = 310        # mean wind direction [degree]
+
 
         if self.goal_y == self.agent_y or self.goal_x == self.agent_x:
             self.reset()
