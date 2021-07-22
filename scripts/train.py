@@ -19,7 +19,7 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
     episode_memory = queue()
     obs = None # Observation
     # Set device
-#    device = torch.device("cuda" if torch.cuda.is_avaulable() else "cpu")
+#    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
  #   txt_logger.info(f"Device: {device}\n")
   #  if device == "cuda":
    #     agent.cuda();
