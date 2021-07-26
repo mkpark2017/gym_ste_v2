@@ -47,7 +47,7 @@ class BasicSteEnv(gym.Env):
         # define the environment and the observations
         self.court_lx = 55		# the size of the environment
         self.court_ly = 55		# the size of the environment
-        self.max_step = 150
+        self.max_step = 50
         self.delta_t = 1		# 1sec
         self.agent_v = 3		# 3m/s
         self.gas_d = 10 		# diffusivity [10m^2/s]
@@ -60,10 +60,11 @@ class BasicSteEnv(gym.Env):
         self.last_y = -1		# last sensing position y
         self.last_action = 0;		# last action
         self.gas_measure = -1;
+        self.outborder = False
 
         # not normalize [local flow velocity (x,y) [m/s], last sampling location (x,y), t-t_last, last action (only direction)
-        self.obs_low_state = np.array([-np.inf, -np.inf, 0, 0,  0, -1, 0])
-        self.obs_high_state = np.array([np.inf,	np.inf,	self.court_lx,	self.court_ly,	self.max_step,	1, np.inf])
+        self.obs_low_state = np.array([-np.inf, -np.inf, 0, 0,  0, -1])
+        self.obs_high_state = np.array([np.inf,	np.inf,	self.court_lx,	self.court_ly,	self.max_step,	1])
         self.observation_space = spaces.Box(self.obs_low_state, self.obs_high_state, dtype=np.float32)
 
         # Action space should be bounded between (-1,1)
@@ -122,14 +123,15 @@ class BasicSteEnv(gym.Env):
     def _reward_failed(self):
         return -100
 
-    def _gas_conc(self, pos_x, pos_y):
+    def _gas_conc(self, pos_x, pos_y): # true gas conectration
         if self.goal_x == pos_x and self.goal_y == pos_y: # to avoid divide by 0
             pos_x += 1e-3
             pos_y += 1e-3
         dist = self._distance(pos_x, pos_y)
-        y_n = -(pos_x - self.goal_x)*math.sin(self.wind_d) + (pos_y - self.goal_y)*math.cos(self.wind_d)
-        lambda_plume = math.sqrt(self.gas_d * self.gas_t / (1 + pow(self.wind_s,2) * self.gas_t/4/self.gas_d) )
-        conc = self.gas_q/(4 * math.pi * self.gas_d * dist) * np.exp(-y_n * self.wind_s/(2*self.gas_d) - dist/lambda_plume)
+        y_n = -(pos_x - self.goal_x)*math.sin(self.wind_mean_phi*math.pi/180)+ \
+                   (pos_y - self.goal_y)*math.cos(self.wind_mean_phi*math.pi/180)
+        lambda_plume = math.sqrt(self.gas_d * self.gas_t / (1 + pow(self.wind_mean_speed,2) * self.gas_t/4/self.gas_d) )
+        conc = self.gas_q/(4 * math.pi * self.gas_d * dist) * np.exp(-y_n * self.wind_mean_speed/(2*self.gas_d) - dist/lambda_plume)
         return conc
 
     def _gas_measure(self, pos_x, pos_y):
@@ -148,12 +150,16 @@ class BasicSteEnv(gym.Env):
     def _step_reward(self):
 #        self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
 #        print(gas_measure)
-        if self.gas_measure > 0.3: # need to be adjusted for different source condition
+        if self.gas_measure > 0.2: # need to be adjusted for different source condition
             reward = 1
-            self.dur_t = 1
+            self.dur_t = 0
         else:
             reward = 0
             self.dur_t += 1
+        return reward
+
+    def _border_reward(self):
+        reward = -100
         return reward
 
     # not normalize [local flow velocity (x,y) [m/s], last sampling location (x,y), t-t_last, last action (only direction)
@@ -169,7 +175,7 @@ class BasicSteEnv(gym.Env):
 
         self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
 
-        return np.array([float(wind_x), float(wind_y), float(self.last_x), float(self.last_y), float(self.dur_t), float(self.last_action), float(self.gas_measure)])
+        return np.array([float(wind_x), float(wind_y), float(self.last_x), float(self.last_y), float(self.dur_t), float(self.last_action)])
 
 #    def _normalize_observation(self, obs):
 #        normalized_obs = []
@@ -189,16 +195,22 @@ class BasicSteEnv(gym.Env):
         self.agent_y = self.agent_y + math.sin(angle) * step_size
 
         # borders
+        rew = 0
         if self.agent_x < 0:
             self.agent_x = 0
+            self.outborder = True
         if self.agent_x > self.court_lx:
             self.agent_x = self.court_lx
+            self.outborder = True
         if self.agent_y < 0:
             self.agent_y = 0
+            self.outborder = True
         if self.agent_y > self.court_ly:
             self.agent_y = self.court_ly
+            self.outborder = True
 
     def step(self, action):
+        self.outborder = False
         self.count_actions += 1
         self._calculate_position(action)
         # calulate new observation
@@ -210,16 +222,16 @@ class BasicSteEnv(gym.Env):
         done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
         rew = 0
         if not done:
-            rew += self._step_reward()
+            rew = self._step_reward()
         else: # Reach the source
-            rew += self._reward_goal_reached()
-
+            rew = self._reward_goal_reached()
         done = bool(self.count_actions >= self.max_step and self._distance(self.agent_x, self.agent_y) > self.eps)
         if done: # Reach the max_step without finding source
-            rew += self._reward_failed()
-
+            rew = self._reward_failed()
+        if self.outborder: # Agent get out to search area
+            rew = self._border_reward()
         # break if more than max_step actions taken
-        done = bool(self.count_actions >= self.max_step or self._distance(self.agent_x, self.agent_y) <= self.eps)
+        done = bool(self.count_actions >= self.max_step or self._distance(self.agent_x, self.agent_y) <= self.eps or self.outborder)
 
         # track, where agent was
         self.positions.append([self.agent_x, self.agent_y])
@@ -242,14 +254,14 @@ class BasicSteEnv(gym.Env):
         self.count_actions = 0
         self.positions = []
         # set initial state randomly
-        # self.agent_x = self.np_random.uniform(low=0, high=self.court_lx)
-        # self.agent_y = self.np_random.uniform(low=0, high=self.court_ly)
-        self.agent_x = 5
-        self.agent_y = 10
+        self.agent_x = self.np_random.uniform(low=0, high=self.court_lx)
+        self.agent_y = self.np_random.uniform(low=0, high=self.court_ly)
+        # self.agent_x = 5
+        # self.agent_y = 10
         # self.goal_x = self.np_random.uniform(low=0, high=self.court_lx)
         # self.goal_y = self.np_random.uniform(low=0, high=self.court_lx)
-        self.goal_x = 45.5
-        self.goal_y = 45.5
+        self.goal_x = 44
+        self.goal_y = 44
 
         # self.gas_d = self.np_random.uniform(low=0, high=20)                # diffusivity [10m^2/s]
         # self.gas_t = self.np_random.uniform(low=500, high=1500)            # gas life time [1000sec]
@@ -279,8 +291,8 @@ class BasicSteEnv(gym.Env):
             max_conc = 100;
             width = 1*self.scale
             height = 1*self.scale
-            for xx in range(self.court_lx - 1):
-                for yy in range(self.court_ly - 1):
+            for xx in range(self.court_lx):
+                for yy in range(self.court_ly):
                     conc = self._gas_conc(xx+0.5, yy+0.5)
                     x = xx*self.scale
                     y = yy*self.scale
@@ -288,7 +300,7 @@ class BasicSteEnv(gym.Env):
                         conc = max_conc
                         color = cm.jet(255) # 255 is maximum number
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
-                    elif conc > 0.1:
+                    elif conc > 0.2:
                         color = cm.jet(round(math.log(conc+1)/math.log(max_conc+1)*255))
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
 

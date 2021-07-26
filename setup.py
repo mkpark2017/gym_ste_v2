@@ -6,6 +6,6 @@ setup(
     url='https://github.com/mkpark2017/gym-ste',
     Author='Minkyu Park',
     packages=['gym_ste'],
-    install_requires=['gym>=0.18.3','numpy>=1.21.0'],
+    install_requires=['gym>=0.18.3','numpy>=1.21.0', 'ipdb'],
     description='OpenAI GYM environments for source term estimation and sample learning codes',
 )

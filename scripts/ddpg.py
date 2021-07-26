@@ -107,6 +107,8 @@ class DDPG(object):
         self.critic_target.eval()
 
     def cuda(self):
+        # device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
         self.actor.cuda()
         self.actor_target.cuda()
         self.critic.cuda()
@@ -129,7 +131,11 @@ class DDPG(object):
             self.actor(to_tensor(np.array([s_t])))
         ).squeeze(0)
         action += self.is_training*max(self.epsilon, 0)*self.random_process.sample()
-        action = np.clip(action, -1., 1.)
+        while action > 1: # Angle wrapping
+            action = action - 2
+        while action < -1:
+            action = action + 2
+        #action = np.clip(action, -1., 1.)
 
         if decay_epsilon:
             self.epsilon -= self.depsilon

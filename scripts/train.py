@@ -20,7 +20,7 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
     obs = None # Observation
     # Set device
 #    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
- #   txt_logger.info(f"Device: {device}\n")
+ #   print(device)
   #  if device == "cuda":
    #     agent.cuda();
 #    print(num_iterations)
@@ -40,6 +40,10 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
             action = agent.random_action()
 #            print(action)
 #            print('\n')
+#        elif step <= int(num_iterations/3):
+#            action = agent.select_action(obs)
+#            if step % 100 == 0:
+#                action = agent.random_action()
         else:
             action = agent.select_action(obs)
         # Env response with next_obs, reward, done, terminate_info
@@ -111,21 +115,26 @@ if __name__ == "__main__":
     parser.add_argument('--init_w', default=0.003, type=float, help='Initial network weight')
     parser.add_argument('--tau', default=0.001, type=float, help='moving average for target network')
     # Set learning parameter
-    parser.add_argument('--warmup', default=100000, type=int, help='time without training but only filling the replay memory')
-    parser.add_argument('--rmsize', default=1000000, type=int, help='Memory size, after exceeding this limits, older entries will be replaced by newer ones')
+    parser.add_argument('--warmup', default=500000, type=int, help='time without training but only filling the replay memory')
+    #warmup 5e5
+    parser.add_argument('--rmsize', default=100000000, type=int, help='Memory size, after exceeding this limits, older entries will be replaced by newer ones')
+    #repeat memory 1e7
     parser.add_argument('--bsize', default=64, type=int, help='minibatch size')
     parser.add_argument('--window_length', default=1, type=int, help='Number of observations to be concatenated as "state", (e.g., Atrai game one used this)')
     parser.add_argument('--train_iter', default=1000000, type=int, help='Total number of steps for training')
-    parser.add_argument('--max_episode_length', default=100, type=int, help='Number of steps for each episode (num_episode = train_iter/max_episode_length')
-    parser.add_argument('--validate_episodes', default=2, type=int, help='Number of episodes to perform validation')
-    parser.add_argument('--validate_steps', default=10000, type=int, help='Validation step interval (only validate each validation step)')
+    #tain iter 1e6
+    parser.add_argument('--max_episode_length', default=50, type=int, help='Number of steps for each episode (num_episode = train_iter/max_episode_length')
+    parser.add_argument('--validate_episodes', default=20, type=int, help='Number of episodes to perform validation')
+    parser.add_argument('--validate_steps', default=20000, type=int, help='Validation step interval (only validate each validation step)')
+    # validate 2e4
     parser.add_argument('--epsilon', default=50000, type=int, help='linear decay of exploration policy')
+    # epsilon 5e4
     # Random process for action (Gaussian-Markov process)
     parser.add_argument('--ou_theta', default=0.015, type=float, help='Noise theta')
-    parser.add_argument('--ou_sigma', default=0.02, type=float, help='Noise sigma') 
+    parser.add_argument('--ou_sigma', default=0.02, type=float, help='Noise sigma')
     parser.add_argument('--ou_mu', default=0.0, type=float, help='Noise mu')
     # User convenience parameter
-    parser.add_argument('--output', default='output', type=str, help='Output root')
+    parser.add_argument('--output', default='output_ddpg_exist', type=str, help='Output root')
     parser.add_argument('--debug', dest='debug', action='store_true', help='Debug')
     parser.add_argument('--seed', default=-1, type=int, help='Random seed')
     parser.add_argument('--resume', default='default', type=str, help='Resuming model path for testing')
@@ -133,7 +142,7 @@ if __name__ == "__main__":
     
     args.output = get_output_folder(args.output, args.env)
     if args.resume == 'default':
-        args.resume = 'output/{}-run2'.format(args.env)
+        args.resume = 'output/{}-run1'.format(args.env)
 
     env = gym.make(args.env)
 
