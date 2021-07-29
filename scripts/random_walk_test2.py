@@ -12,7 +12,7 @@ ray.init(num_cpus=num_cpus)
 #import gym_ste.envs
 
 DEBUG = True
-env = gym.make('gym_ste:StePFilterEasyEnv-v0')
+env = gym.make('gym_ste:StePFilterModEnv-v0')
 
 for e in range(100):
     obs = env.reset()

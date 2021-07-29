@@ -26,7 +26,7 @@ class StePFilterModEnv(BasicSteEnv):
         BasicSteEnv.__init__(self)
         # [local flow velocity (x,y) [m/s] (maximum 100,100), current location (x,y), t-t_last, last action (only direction), last conc, concentration (max 100 mg/m^3), last highest conc]
         self.last_measure = 0
-        self.pf_num = 100
+        self.pf_num = 30
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         pf_low_state_wp = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -58,6 +58,8 @@ class StePFilterModEnv(BasicSteEnv):
         self.screen_height = 300
         self.scale = self.screen_width/self.court_lx
 
+        self.total_time = 0
+        self.total_count = 1
 #        self.num_cores = int((multiprocessing.cpu_count())/2)
 
         # set a seed and reset the environment
@@ -117,16 +119,16 @@ class StePFilterModEnv(BasicSteEnv):
             i=i+1
 
         indx = np.int64(indx)
-        for i in range(0,N):
-            self.pf_x[i] = self.pf_x[indx[i]]
-            self.pf_y[i] = self.pf_y[indx[i]]
-            self.pf_q[i] = self.pf_q[indx[i]]
+#        for i in range(0,N):
+        self.pf_x = self.pf_x[indx]
+        self.pf_y = self.pf_y[indx]
+        self.pf_q = self.pf_q[indx]
 
         mm = 2
         A=pow(4/(mm+2), 1/(mm+4) )
         cx = 4*math.pi/3
         hopt = A*pow(A,-1/(mm+4))
-        for _ in range(3):
+        for _ in range(1):
             CovXxp = np.var(self.pf_x)
             CovXyp = np.var(self.pf_y)
             CovXqp = np.var(self.pf_q)
@@ -192,14 +194,14 @@ class StePFilterModEnv(BasicSteEnv):
         self.last_y = self.agent_y
 
         self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
-
-        start = datetime.now()
-
+#        start = datetime.now()
         self._particle_filter()
-#        self.pf_x, self.pf_y, self.pf_q, self.Wps, self.Wpnorms = ParticleFilter(self)
-#        aaa = ParticleFilter(self)
-#        print(aaa)
-        print("duration =", datetime.now() - start)
+#        duration = datetime.now() - start
+#        self.total_time += duration.total_seconds()
+#        print("duration =", duration)
+#        print("mean duration =", self.total_time/self.total_count)
+#        self.total_count += 1
+
 
 #        etc_state = np.array([float(wind_x), float(wind_y), float(self.last_x), float(self.last_y), float(self.dur_t), float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
         etc_state = np.array([float(self.wind_d/math.pi), float(self.wind_s), float(self.dur_t), float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
