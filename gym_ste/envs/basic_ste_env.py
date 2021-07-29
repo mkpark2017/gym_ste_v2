@@ -79,6 +79,7 @@ class BasicSteEnv(gym.Env):
 
         self.count_actions = 0  # count actions for rewarding
         self.eps = 0.1*self.court_lx  # distance to goal, that has to be reached to solve env
+        self.conc_eps = 0.2;
         self.np_random = None  # random generator
 
         # agent
@@ -101,8 +102,8 @@ class BasicSteEnv(gym.Env):
         self.true_conc = np.zeros((self.court_lx, self.court_ly))
 
         # set a seed and reset the environment
-        self.seed()
-        self.reset()
+        # self.seed()
+        # self.reset()
 
     def _distance(self, pose_x, pose_y):
         return math.sqrt(pow((self.goal_x - pose_x), 2) + pow(self.goal_y - pose_y, 2))
@@ -150,7 +151,7 @@ class BasicSteEnv(gym.Env):
     def _step_reward(self):
 #        self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
 #        print(gas_measure)
-        if self.gas_measure > 0.2: # need to be adjusted for different source condition
+        if self.gas_measure > self.conc_eps: # need to be adjusted for different source condition
             reward = 1
             self.dur_t = 0
         else:
@@ -186,8 +187,8 @@ class BasicSteEnv(gym.Env):
 
     def _calculate_position(self, action):
         angle = (action) * math.pi
-        if angle > 2 * math.pi:
-            angle -= 2 * math.pi
+        # if angle > 2 * math.pi:
+        #    angle -= 2 * math.pi
         # step_size = (action[1] + 1) / 2 * self.max_step_size
         step_size = self.agent_v * self.delta_t
         # calculate new agent state
@@ -254,10 +255,10 @@ class BasicSteEnv(gym.Env):
         self.count_actions = 0
         self.positions = []
         # set initial state randomly
-        self.agent_x = self.np_random.uniform(low=0, high=self.court_lx)
-        self.agent_y = self.np_random.uniform(low=0, high=self.court_ly)
-        # self.agent_x = 5
-        # self.agent_y = 10
+        # self.agent_x = self.np_random.uniform(low=0, high=self.court_lx)
+        # self.agent_y = self.np_random.uniform(low=0, high=self.court_ly)
+        self.agent_x = 5
+        self.agent_y = 10
         # self.goal_x = self.np_random.uniform(low=0, high=self.court_lx)
         # self.goal_y = self.np_random.uniform(low=0, high=self.court_lx)
         self.goal_x = 44
@@ -273,7 +274,7 @@ class BasicSteEnv(gym.Env):
         self.wind_mean_phi = 310        # mean wind direction [degree]
 
 
-        if self.goal_y == self.agent_y or self.goal_x == self.agent_x:
+        if math.sqrt(pow(self.goal_y - self.agent_y,2) + pow(self.goal_x - self.agent_x,2) ) < self.court_lx*0.3:
             self.reset()
         self.positions.append([self.agent_x, self.agent_y])
         if self.debug:
@@ -300,7 +301,7 @@ class BasicSteEnv(gym.Env):
                         conc = max_conc
                         color = cm.jet(255) # 255 is maximum number
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
-                    elif conc > 0.2:
+                    elif conc > self.conc_eps:
                         color = cm.jet(round(math.log(conc+1)/math.log(max_conc+1)*255))
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
 

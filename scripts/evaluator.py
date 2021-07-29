@@ -5,6 +5,8 @@ from observation_processor import queue
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from utils import *
+import time
+
 
 writer = SummaryWriter()
 
@@ -18,6 +20,7 @@ class Evaluator(object):
         self.save_path = args.output
         self.results = np.array([]).reshape(self.num_episodes,0)
         self.result = []
+        self.pause_t = args.pause_time
 
     def __call__(self, env, policy, debug=False, visualize=False, save=True):
 
@@ -30,9 +33,10 @@ class Evaluator(object):
 
             # reset at the start of episode
             env.close()
-            env.render_background(mode='human')
-
             observation = env.reset()
+            env.render_background(mode='human')
+#            print("---------------------------------------------")
+#            print("goal (x: " + str(env.goal_x) + ", y: " + str(env.goal_y) + ")")
             episode_memory.append(observation)
             observation = episode_memory.getObservation(self.window_length, observation)
             episode_steps = 0
@@ -52,14 +56,18 @@ class Evaluator(object):
                 # Change the episode when episode_steps reach max_episode_length
                 if self.max_episode_length and episode_steps >= self.max_episode_length -1:
                     done = True
-                
+
                 if visualize:
                     env.render(mode='human')
 
                 # update
                 episode_reward += reward
                 episode_steps += 1
+                time.sleep(self.pause_t)
 
+                
+#            print("goal (x: " + str(env.goal_x) + ", y: " + str(env.goal_y) + ")")
+#            print("---------------------------------------------")
             if debug:
                 prRed('[Evaluate] #Episode{}: episode_reward:{}'.format(episode,episode_reward))
 #                env.close()

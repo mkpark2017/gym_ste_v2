@@ -3,10 +3,16 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
+import psutil
+import ray
+
+num_cpus = psutil.cpu_count(logical=False)
+ray.init(num_cpus=num_cpus)
+
 #import gym_ste.envs
 
 DEBUG = True
-env = gym.make('gym_ste:BasicSteEnv-v0')
+env = gym.make('gym_ste:StePFilterModEnv-v0')
 
 for e in range(100):
     obs = env.reset()
@@ -23,8 +29,10 @@ for e in range(100):
 
         env.render(mode='human')
         cumulated_reward += rew
+        time.sleep(0.1)
         if DEBUG:
             print(info)
+#        env.close()
     if DEBUG and done:
         time.sleep(3)
 

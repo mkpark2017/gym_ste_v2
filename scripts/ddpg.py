@@ -131,6 +131,7 @@ class DDPG(object):
             self.actor(to_tensor(np.array([s_t])))
         ).squeeze(0)
         action += self.is_training*max(self.epsilon, 0)*self.random_process.sample()
+#        print("original_action: " + str(action))
         while action > 1: # Angle wrapping
             action = action - 2
         while action < -1:

@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='gym_ste',
-    version='0.0.3',
+    version='0.0.4',
     url='https://github.com/mkpark2017/gym-ste',
     Author='Minkyu Park',
     packages=['gym_ste'],
