@@ -6,15 +6,15 @@ import numpy as np
 import psutil
 import ray
 
-num_cpus = psutil.cpu_count(logical=False)
-ray.init(num_cpus=num_cpus)
+#num_cpus = psutil.cpu_count(logical=False)
+#ray.init(num_cpus=num_cpus)
 
 #import gym_ste.envs
 
 DEBUG = True
-env = gym.make('gym_ste:StePFilterEasyEnv-v0')
+env = gym.make('gym_ste:StePFilterConvVeryHardEnv-v0')
 
-for e in range(100):
+for e in range(300):
     obs = env.reset()
     cumulated_reward = 0
     i = 0

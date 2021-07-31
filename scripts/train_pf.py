@@ -91,7 +91,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch DDPG')
     # Set Environment
     parser.add_argument('--mode', default='train', type=str, help='support option: train/test')
-    parser.add_argument('--env', default='gym_ste:StePFilterModEnv-v0', type=str, help='open-ai gym environment')
+    parser.add_argument('--env', default='gym_ste:StePFilterConvEasyEnv-v0', type=str, help='open-ai gym environment')
     # Set network parameter
     parser.add_argument('--hidden1', default=400, type=int, help='hidden num of first fully connect layer')
     parser.add_argument('--hidden2', default=300, type=int, help='hidden num of second fully connect layer')

@@ -196,7 +196,6 @@ class BasicSteEnv(gym.Env):
         self.agent_y = self.agent_y + math.sin(angle) * step_size
 
         # borders
-        rew = 0
         if self.agent_x < 0:
             self.agent_x = 0
             self.outborder = True
