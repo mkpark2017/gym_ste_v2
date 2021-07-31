@@ -49,7 +49,7 @@ class BasicSteEnv(gym.Env):
         self.court_ly = 55		# the size of the environment
         self.max_step = 50
         self.delta_t = 1		# 1sec
-        self.agent_v = 3		# 3m/s
+        self.agent_v = 2		# 2m/s
         self.gas_d = 10 		# diffusivity [10m^2/s]
         self.gas_t = 1000 		# gas life time [1000sec]
         self.gas_q = 2000		# gas strength
@@ -136,8 +136,8 @@ class BasicSteEnv(gym.Env):
         return conc
 
     def _gas_measure(self, pos_x, pos_y):
-        env_sig = 0. #0.4
-        sensor_sig_m = 0. #0.2;
+        env_sig = 0.05 #0.4
+        sensor_sig_m = 0.02 #0.2;
         conc = self._gas_conc(self.agent_x, self.agent_y)
         conc_env = self.np_random.normal(conc,env_sig)
         while conc_env < 0:

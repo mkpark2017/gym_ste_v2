@@ -4,6 +4,7 @@ import torch
 import gym
 import numpy as np
 import os
+import math
 from observation_processor import queue
 
 from evaluator import Evaluator
@@ -16,7 +17,7 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
     episode_reward = 0.
     episode_memory = queue()
     obs = None # Observation
-
+    pf_num = 30
     while step < num_iterations:
         #reset if it is the start of episode
         if obs is None:
@@ -27,7 +28,10 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
             agent.reset(obs)
         # Agent pick action
         if step <= args.warmup:
-            action = agent.random_action()
+#            action = agent.random_action()
+            c_x = np.mean(obs[8:8+pf_num]*60)
+            c_y = np.mean(obs[8+pf_num:8+pf_num*2]*60)
+            action = float(math.atan2(c_y,c_x)/math.pi + np.random.rand(1)/10)
         else:
             action = agent.select_action(obs)
         # Env response with next_obs, reward, done, terminate_info
@@ -83,7 +87,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch DDPG')
     # Set Environment
     parser.add_argument('--mode', default='train', type=str, help='support option: train/test')
-    parser.add_argument('--env', default='gym_ste:StePFilterVeryHardEnv-v0', type=str, help='open-ai gym environment')
+    parser.add_argument('--env', default='gym_ste:StePFilterConvVeryHardEnv-v0', type=str, help='open-ai gym environment')
     # Set network parameter
     parser.add_argument('--hidden1', default=400, type=int, help='hidden num of first fully connect layer')
     parser.add_argument('--hidden2', default=300, type=int, help='hidden num of second fully connect layer')
@@ -112,7 +116,7 @@ if __name__ == "__main__":
     parser.add_argument('--ou_sigma', default=0.02, type=float, help='Noise sigma')
     parser.add_argument('--ou_mu', default=0.0, type=float, help='Noise mu')
     # User convenience parameter
-    parser.add_argument('--output', default='output_ddpg_pf_very_hard', type=str, help='Output root')
+    parser.add_argument('--output', default='output_ddpg_pf_conv_very_hard', type=str, help='Output root')
     parser.add_argument('--debug', dest='debug', action='store_true', help='Debug')
     parser.add_argument('--seed', default=-1, type=int, help='Random seed')
     parser.add_argument('--resume', default='default', type=str, help='Resuming model path for testing')

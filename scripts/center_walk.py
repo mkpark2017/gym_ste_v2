@@ -16,13 +16,13 @@ for e in range(100):
     i = 0
     done = False
     env.render_background(mode='human')
-    pf_num = 10
+    pf_num = 30
     while not done and i <= 100:
     #while 1:
         i += 1
 #        print(obs[7:17]*55)
-        c_x = np.mean(obs[7:7+pf_num]*55)
-        c_y = np.mean(obs[7+pf_num:7+pf_num*2]*55)
+        c_x = np.mean(obs[8:8+pf_num]*60)
+        c_y = np.mean(obs[8+pf_num:8+pf_num*2]*60)
         act = math.atan2(c_y,c_x)/math.pi + np.random.rand(1)/10
 #        act = env.action_space.sample()
         obs, rew, done, info = env.step(act)     # take a random action

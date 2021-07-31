@@ -20,8 +20,10 @@ class StePFilterBaseEnv(BasicSteEnv):
         self.agent_dist = self.agent_v * self.delta_t
 
         self.last_measure = 0
+        self.court_lx = 60              # the size of the environment
+        self.court_ly = 60              # the size of the environment
 
-        self.pf_num = 10
+        self.pf_num = 30
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         pf_low_state_wp = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -47,14 +49,13 @@ class StePFilterBaseEnv(BasicSteEnv):
         self.normalization = True
         self.max_step = 1000
 
-        self.env_sig = 0.4 #0.4
-        self.sensor_sig_m = 0.2 #0.2;
+        self.env_sig = 0.1 #0.05
+        self.sensor_sig_m = 0.05 #0.02;
 
         self.screen_width = 200
         self.screen_height = 200
         self.scale = self.screen_width/self.court_lx
 
-        self.total_count = 1
         self.total_time = 0.
 
         self.CovXxp = 0.
@@ -162,7 +163,7 @@ class StePFilterBaseEnv(BasicSteEnv):
  #           print(self.Wps)
         self.Wpnorms = self.Wps/Wp_sum
 
-        if 1/sum(pow(self.Wpnorms,2)) < self.pf_num: # 1 for every time
+        if 1/sum(pow(self.Wpnorms,2)) < self.pf_num*0.5: # 1 for every time
             self._particle_resample(gauss_new)
             self.CovXxp = np.var(self.pf_x)
             self.CovXyp = np.var(self.pf_y)
@@ -201,9 +202,8 @@ class StePFilterBaseEnv(BasicSteEnv):
         self.last_y = self.agent_y
 
         self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
+        self._particle_filter()
         x_warning, y_warning = self._boundary_warning_sensor()
-
-        self.total_count += 1
 
 #        etc_state = np.array([float(wind_x), float(wind_y), float(self.last_x), float(self.last_y), float(self.dur_t), float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
         etc_state = np.array([float(self.wind_d/math.pi), float(self.wind_s), x_warning, y_warning, float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
@@ -267,13 +267,13 @@ class StePFilterBaseEnv(BasicSteEnv):
 
         self.last_action = action
 
+        rew = 0
         if self.outborder: # Agent get out to search area
-            rew = self._border_reward()
+            rew += self._border_reward()
         # done for step rewarding
         done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
-        rew = 0
         if not done:
-            rew = self._step_reward()
+            rew += self._step_reward()
         else: # Reach the source
             rew = self._reward_goal_reached()
 #        done = bool(self.count_actions >= self.max_step and self._distance(self.agent_x, self.agent_y) > self.eps)
@@ -295,16 +295,20 @@ class StePFilterBaseEnv(BasicSteEnv):
         norm_obs = []
         if self.normalization:
            norm_obs = self._normalize_observation(obs)
+           warning_x_text = str(norm_obs[2]*(self.agent_dist*2)-self.agent_dist)
+           warning_y_text = str(norm_obs[3]*(self.agent_dist*2)-self.agent_dist)
+
            info = "time step:" + str(self.count_actions) + ", act:" + str(
-                   round(float(action)*180,2)) + ", local flow: (" + str(round(norm_obs[0],2)) + ", " + str(
-                   round(norm_obs[1],2)) + "), dur_t from last capture: " + str(round(norm_obs[2],2)) + ", last action: " + str(
-                   round(float(norm_obs[3])*180,2)) + ", last conc" + str(round(norm_obs[4]*self.conc_max,2)) + ", conc" + str(
-                   round(norm_obs[5]*self.conc_max,2)) + ", last highest conc" + str(round(norm_obs[6]*self.conc_max,2)) + ", last highest conc" + str(
-                   round(norm_obs[7]*self.conc_max,2)) + ", particles_x : " + str(
+                   round(float(action)*180,2)) + ", local flow: (" + str(round(norm_obs[0]*180,2)) + "degree, " + str(
+                   round(norm_obs[1]*20,2)) + "m/s), Range warning: (" + str(
+                   warning_x_text) + ", " + str(warning_y_text) + "), last acton: " + str(
+                   round(float(norm_obs[4])*180,2)) + ", last conc:" + str(round(norm_obs[5]*self.conc_max,2)) + ", conc:" + str(
+                   round(norm_obs[6]*self.conc_max,2)) + ", highest conc:" + str(round(norm_obs[7]*self.conc_max,2)) +", particles_x : " + str(
                    np.round(norm_obs[8:8+self.pf_num]*self.court_lx,2)) + ", particles_y : " + str(
                    np.round(norm_obs[8+self.pf_num:8+self.pf_num*2]*self.court_lx,2)) + ", particles_wp : " + str(
                    np.round(norm_obs[8+self.pf_num*2:8+self.pf_num*3],2)) + ", rew:" + str(rew) + ", current pos: (" + str(round(self.agent_x,2)) + "," + str(
-                   round(self.agent_y,2)) + ")", "goal pos: (" + str(self.goal_x) + "," + str(self.goal_y) + "), done: " + str(done)
+                   round(self.agent_y,2)) + ")", "goal pos: (" + str(round(self.goal_x,2)) + "," + str(round(self.goal_y,2)) + "), done: " + str(done)
+
            return norm_obs, rew, done, info
         else:
            info = "time step:" + str(self.count_actions) + ", act:" + str(
