@@ -38,6 +38,7 @@ class StePFilterEasyEnv(StePFilterBaseEnv):
         self.gas_t = 1000               # gas life time [1000sec]
         self.gas_q = 2000               # gas strength
         self.wind_mean_phi = 310        # mean wind direction [degree]
+        self.wind_mean_speed = 2
 
 register(
     id='StePFilterEasyEnv-v0',

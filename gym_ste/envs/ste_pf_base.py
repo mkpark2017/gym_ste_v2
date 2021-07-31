@@ -16,22 +16,25 @@ class StePFilterBaseEnv(BasicSteEnv):
 
     def __init__(self):
         BasicSteEnv.__init__(self)
-        # [local flow velocity (x,y) [m/s] (maximum 100,100), current location (x,y), t-t_last, last action (only direction), last conc, concentration (max 100 mg/m^3), last highest conc]
+
+        self.agent_dist = self.agent_v * self.delta_t
+
         self.last_measure = 0
+
         self.pf_num = 10
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         pf_low_state_wp = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
-#        etc_low_state = np.array([-100, -100, 0, 0,  0, -1, 0, 0, 0]) # [local flow velocity (x,y) [m/s] (maximum 100,100), current location (x,y), t-t_last, last action (only direction), last concentration, concentration (max 100 mg/m^3), last highest conc]
-        etc_low_state = np.array([-1, -20, 0, -1, 0, 0, 0]) # [wind_direction, wind speed, t-t_last, last action (only direction), last entration, concentration (max 100 mg/m^3), last highest conc]
+#        etc_low_state = np.array([-1, -20, 0, -1, 0, 0, 0]) # [wind_direction, wind speed (m/s), last action (only direction), last concentration, concentration (max 100 mg/m^3), last highest conc]
+        etc_low_state = np.array([-1, 0, -self.agent_dist, -self.agent_dist, -1, 0, 0, 0]) # [wind_direction, wind speed (m/s), boundary warning (x,y), last action (only direction), last concentration, concentration (max 100 mg/m^3)]
         self.obs_low_state = np.concatenate((etc_low_state, self.pf_low_state_x, self.pf_low_state_y, pf_low_state_wp), axis=None)
 
         self.conc_max = 100
         self.pf_high_state_x = np.ones(self.pf_num)*self.court_lx
         self.pf_high_state_y = np.ones(self.pf_num)*self.court_ly
         pf_high_state_wp = np.ones(self.pf_num)
-#        etc_high_state = np.array([100, 100, self.court_lx,  self.court_ly,  self.max_step,  1, self.conc_max, self.conc_max, self.conc_max])
-        etc_high_state = np.array([1, 20,  self.max_step,  1, self.conc_max, self.conc_max, self.conc_max])
+#        etc_high_state = np.array([1, 20,  self.max_step,  1, self.conc_max, self.conc_max, self.conc_max])
+        etc_high_state = np.array([1, 20,  self.agent_dist, self.agent_dist, 1, self.conc_max, self.conc_max, self.conc_max])
         self.obs_high_state = np.concatenate((etc_high_state, self.pf_high_state_x, self.pf_high_state_y, pf_high_state_wp), axis=None)
         self.observation_space = spaces.Box(self.obs_low_state, self.obs_high_state, dtype=np.float32)
 
@@ -56,7 +59,7 @@ class StePFilterBaseEnv(BasicSteEnv):
 
         self.CovXxp = 0.
         self.CovXyp = 0.
-
+        self.warning = False
         # set a seed and reset the environment
         self.seed()
 #        self.reset()
@@ -164,27 +167,49 @@ class StePFilterBaseEnv(BasicSteEnv):
             self.CovXxp = np.var(self.pf_x)
             self.CovXyp = np.var(self.pf_y)
 
+    def _boundary_warning_sensor(self):
+        dist_x = self.court_lx - self.agent_x
+        if dist_x == 0: dist_x = 1e-2
+        dist_y = self.court_ly - self.agent_y
+        if dist_y == 0: dist_y = 1e-2
+        x_warning = 0
+        y_warning = 0
+        if dist_x < self.agent_dist*0.99:
+            x_warning = dist_x
+            self.warning = True
+        if dist_y < self.agent_dist*0.99:
+            y_warning = dist_y
+            self.warning = True
+        dist_x = 0 - self.agent_x
+        if dist_x == 0: dist_x = -1e-2
+        dist_y = 0 - self.agent_y
+        if dist_y == 0: dist_y = -1e-2
+        if abs(dist_x) < self.agent_dist*0.99:
+            x_warning = dist_x
+            self.warning = True
+        if abs(dist_y) < self.agent_dist*0.99:
+            y_warning = dist_y
+            self.warning = True
+        
+        return x_warning, y_warning
 
     def _observation(self):
         self.wind_d, self.wind_s = self._wind_sensor() # wind direction & speed
-        wind_x = math.cos(self.wind_d + math.pi/2)*self.wind_s
-        wind_y = math.sin(self.wind_d + math.pi/2)*self.wind_s
+#        wind_x = math.cos(self.wind_d + math.pi/2)*self.wind_s
+#        wind_y = math.sin(self.wind_d + math.pi/2)*self.wind_s
         self.last_x = self.agent_x
         self.last_y = self.agent_y
 
         self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
-        start = datetime.now()
-        self._particle_filter()
-        duration = datetime.now() - start
-        self.total_time += duration.total_seconds()
-        print("duration =", duration)
-        print("mean duration =", self.total_time/self.total_count)
+        x_warning, y_warning = self._boundary_warning_sensor()
+
         self.total_count += 1
 
 #        etc_state = np.array([float(wind_x), float(wind_y), float(self.last_x), float(self.last_y), float(self.dur_t), float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
-        etc_state = np.array([float(self.wind_d/math.pi), float(self.wind_s), float(self.dur_t), float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
+        etc_state = np.array([float(self.wind_d/math.pi), float(self.wind_s), x_warning, y_warning, float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
 
         return np.concatenate((etc_state, self.pf_x-self.agent_x, self.pf_y-self.agent_y, self.Wpnorms), axis=None)
+
 
     def _normalize_observation(self, obs):
         normalized_obs = []
@@ -204,7 +229,7 @@ class StePFilterBaseEnv(BasicSteEnv):
         return gas_measure
 
     def _reward_goal_reached(self):
-        return 1 #100
+        return 10 #100
 
     def _reward_failed(self):
         return 0 #-100
@@ -219,8 +244,20 @@ class StePFilterBaseEnv(BasicSteEnv):
         return reward
 
     def _border_reward(self):
-        reward = 0 #-100
+        reward = -1 #-100
         return reward
+
+    def _set_init_state(self):
+        # set initial state randomly
+        self.agent_x = self.np_random.uniform(low=0, high=self.court_lx)
+        self.agent_y = self.np_random.uniform(low=0, high=self.court_ly)
+        self.goal_x = 44
+        self.goal_y = 44
+
+        self.gas_d = 10                 # diffusivity [10m^2/s]
+        self.gas_t = 1000               # gas life time [1000sec]
+        self.gas_q = 2000               # gas strength
+        self.wind_mean_phi = 310        # mean wind direction [degree]
 
     def step(self, action):
         self.outborder = False
@@ -230,6 +267,8 @@ class StePFilterBaseEnv(BasicSteEnv):
 
         self.last_action = action
 
+        if self.outborder: # Agent get out to search area
+            rew = self._border_reward()
         # done for step rewarding
         done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
         rew = 0
@@ -237,11 +276,9 @@ class StePFilterBaseEnv(BasicSteEnv):
             rew = self._step_reward()
         else: # Reach the source
             rew = self._reward_goal_reached()
-        done = bool(self.count_actions >= self.max_step and self._distance(self.agent_x, self.agent_y) > self.eps)
-        if done: # Reach the max_step without finding source
-            rew = self._reward_failed()
-        if self.outborder: # Agent get out to search area
-            rew = self._border_reward()
+#        done = bool(self.count_actions >= self.max_step and self._distance(self.agent_x, self.agent_y) > self.eps)
+#        if done: # Reach the max_step without finding source
+#            rew = self._reward_failed()
         # break if more than max_step actions taken
         done = bool(self.count_actions >= self.max_step or self._distance(self.agent_x, self.agent_y) <= self.eps or self.outborder)
 
@@ -262,10 +299,11 @@ class StePFilterBaseEnv(BasicSteEnv):
                    round(float(action)*180,2)) + ", local flow: (" + str(round(norm_obs[0],2)) + ", " + str(
                    round(norm_obs[1],2)) + "), dur_t from last capture: " + str(round(norm_obs[2],2)) + ", last action: " + str(
                    round(float(norm_obs[3])*180,2)) + ", last conc" + str(round(norm_obs[4]*self.conc_max,2)) + ", conc" + str(
-                   round(norm_obs[5]*self.conc_max,2)) + ", last highest conc" + str(round(norm_obs[6]*self.conc_max,2)) + ", particles_x : " + str(
-                   np.round(norm_obs[7:7+self.pf_num]*self.court_lx,2)) + ", particles_y : " + str(
-                   np.round(norm_obs[7+self.pf_num:7+self.pf_num*2]*self.court_lx,2)) + ", particles_wp : " + str(
-                   np.round(norm_obs[7+self.pf_num*2:7+self.pf_num*3],2)) + ", rew:" + str(rew) + ", current pos: (" + str(round(self.agent_x,2)) + "," + str(
+                   round(norm_obs[5]*self.conc_max,2)) + ", last highest conc" + str(round(norm_obs[6]*self.conc_max,2)) + ", last highest conc" + str(
+                   round(norm_obs[7]*self.conc_max,2)) + ", particles_x : " + str(
+                   np.round(norm_obs[8:8+self.pf_num]*self.court_lx,2)) + ", particles_y : " + str(
+                   np.round(norm_obs[8+self.pf_num:8+self.pf_num*2]*self.court_lx,2)) + ", particles_wp : " + str(
+                   np.round(norm_obs[8+self.pf_num*2:8+self.pf_num*3],2)) + ", rew:" + str(rew) + ", current pos: (" + str(round(self.agent_x,2)) + "," + str(
                    round(self.agent_y,2)) + ")", "goal pos: (" + str(self.goal_x) + "," + str(self.goal_y) + "), done: " + str(done)
            return norm_obs, rew, done, info
         else:
@@ -353,4 +391,3 @@ class StePFilterBaseEnv(BasicSteEnv):
 #            self.viewer.add_geom(DrawText(label))
 
             return self.viewer.render(return_rgb_array=mode == 'rgb_array')
-
