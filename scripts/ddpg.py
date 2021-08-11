@@ -26,6 +26,7 @@ class DDPG(object):
         net_cfg = {
             'hidden1':args.hidden1, 
             'hidden2':args.hidden2, 
+            'hidden3':args.hidden3, 
             'init_w':args.init_w
         }
         self.actor = Actor(self.nb_states, self.nb_actions, **net_cfg) # call network

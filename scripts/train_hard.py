@@ -16,7 +16,8 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
     episode_reward = 0.
     episode_memory = queue()
     obs = None # Observation
-
+    highest_reward = -10.
+    validate_reward = -10.
     while step < num_iterations:
         #reset if it is the start of episode
         if obs is None:
@@ -37,6 +38,7 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
 #                action = agent.random_action()
         else:
             action = agent.select_action(obs)
+#            print(action)
         # Env response with next_obs, reward, done, terminate_info
         obs2, reward, done, info = env.step(action)
         episode_memory.append(obs2)
@@ -54,9 +56,11 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
             validate_reward = evaluate(env, policy, debug=False, visualize=True)
             if debug:
                 prRed('[Evaluate] Step_{:07d}: mean_reward:{}'.format(step, validate_reward))
-        # Save intermediate model
-        if step % int(num_iterations/3) == 0:
-            agent.save_model(output)
+            # Save intermediate model
+            if highest_reward < validate_reward:
+                prRed('Highest reward: {}, Validate_reward: {}'.format(highest_reward, validate_reward))
+                highest_reward = validate_reward
+                agent.save_model(output)
         # Update
         step += 1
         episode_steps += 1
@@ -81,10 +85,10 @@ def test(num_episodes, agent, env, evaluate, model_path, visualize=True, debug=F
     agent.eval()
     policy = lambda x: agent.select_action(x, decay_epsilon=False)
 
-    for i in range(num_episodes):
-        validate_reward = evaluate(env, policy, debug=debug, visualize=visualize, save=False)
-        if debug:
-            prRed('[Evaluate] #{}: mean_reward:{}'.format(i, validate_reward))
+#    for i in range(num_episodes):
+    validate_reward = evaluate(env, policy, debug=debug, visualize=visualize, save=False)
+    if debug:
+        prRed('[Evaluate] mean_reward:{}'.format(validate_reward))
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch DDPG')
@@ -92,34 +96,36 @@ if __name__ == "__main__":
     parser.add_argument('--mode', default='train', type=str, help='support option: train/test')
     parser.add_argument('--env', default='gym_ste:SteHardEnv-v0', type=str, help='open-ai gym environment')
     # Set network parameter
-    parser.add_argument('--hidden1', default=400, type=int, help='hidden num of first fully connect layer')
-    parser.add_argument('--hidden2', default=300, type=int, help='hidden num of second fully connect layer')
-    parser.add_argument('--rate', default=0.001, type=float, help='learning rate')
-    parser.add_argument('--prate', default=0.0001, type=float, help='policy net learning rate (only for DDPG)')
-    parser.add_argument('--discount', default=0.99, type=float, help='Discount factor for next Q values')
+    parser.add_argument('--hidden1', default=1000, type=int, help='hidden num of first fully connect layer')
+    parser.add_argument('--hidden2', default=400, type=int, help='hidden num of second fully connect layer')
+    parser.add_argument('--hidden3', default=300, type=int, help='hidden num of third fully connect layer')
+
+    parser.add_argument('--rate', default=0.0001, type=float, help='learning rate')
+    parser.add_argument('--prate', default=0.00001, type=float, help='policy net learning rate (only for DDPG)')
+    parser.add_argument('--discount', default=0.95, type=float, help='Discount factor for next Q values')
     parser.add_argument('--init_w', default=0.003, type=float, help='Initial network weight')
-    parser.add_argument('--tau', default=0.001, type=float, help='moving average for target network')
+    parser.add_argument('--tau', default=0.0001, type=float, help='moving average for target network')
     # Set learning parameter
-    parser.add_argument('--warmup', default=50000, type=int, help='time without training but only filling the replay memory')
+    parser.add_argument('--warmup', default=2000000, type=int, help='time without training but only filling the replay memory')
     #warmup 5e5
-    parser.add_argument('--rmsize', default=10000000, type=int, help='Memory size, after exceeding this limits, older entries will be replaced by newer ones')
+    parser.add_argument('--rmsize', default=2000000, type=int, help='Memory size, after exceeding this limits, older entries will be replaced by newer ones')
     #repeat memory 1e7
     parser.add_argument('--bsize', default=64, type=int, help='minibatch size')
     parser.add_argument('--window_length', default=1, type=int, help='Number of observations to be concatenated as "state", (e.g., Atrai game one used this)')
-    parser.add_argument('--train_iter', default=100000, type=int, help='Total number of steps for training')
+    parser.add_argument('--train_iter', default=10000000, type=int, help='Total number of steps for training')
     #tain iter 1e6
-    parser.add_argument('--max_episode_length', default=150, type=int, help='Number of steps for each episode (num_episode = train_iter/max_episode_length')
+    parser.add_argument('--max_episode_length', default=300, type=int, help='Number of steps for each episode (num_episode = train_iter/max_episode_length')
     parser.add_argument('--validate_episodes', default=20, type=int, help='Number of episodes to perform validation')
-    parser.add_argument('--validate_steps', default=2000, type=int, help='Validation step interval (only validate each validation step)')
+    parser.add_argument('--validate_steps', default=100000, type=int, help='Validation step interval (only validate each validation step)')
     # validate 2e4
-    parser.add_argument('--epsilon', default=5000, type=int, help='linear decay of exploration policy')
+    parser.add_argument('--epsilon', default=8000000, type=int, help='linear decay of exploration policy')
     # epsilon 5e4
     # Random process for action (Gaussian-Markov process)
     parser.add_argument('--ou_theta', default=0.015, type=float, help='Noise theta')
     parser.add_argument('--ou_sigma', default=0.02, type=float, help='Noise sigma')
     parser.add_argument('--ou_mu', default=0.0, type=float, help='Noise mu')
     # User convenience parameter
-    parser.add_argument('--output', default='output_ddpg_mine', type=str, help='Output root')
+    parser.add_argument('--output', default='output_ddpg_3layers_0809', type=str, help='Output root')
     parser.add_argument('--debug', dest='debug', action='store_true', help='Debug')
     parser.add_argument('--seed', default=-1, type=int, help='Random seed')
     parser.add_argument('--resume', default='default', type=str, help='Resuming model path for testing')
@@ -128,7 +134,7 @@ if __name__ == "__main__":
     
     args.output = get_output_folder(args.output, args.env)
     if args.resume == 'default':
-        args.resume = 'output/{}-run1'.format(args.env)
+        args.resume = 'output_ddpg_3layers_0809/{}-run1'.format(args.env)
 
     env = gym.make(args.env)
 

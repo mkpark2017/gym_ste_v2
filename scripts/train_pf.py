@@ -27,14 +27,7 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
             agent.reset(obs)
         # Agent pick action
         if step <= args.warmup:
-#            print(step)
             action = agent.random_action()
-#            print(action)
-#            print('\n')
-#        elif step <= int(num_iterations/3):
-#            action = agent.select_action(obs)
-#            if step % 100 == 0:
-#                action = agent.random_action()
         else:
             action = agent.select_action(obs)
 #            print(action)

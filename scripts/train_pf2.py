@@ -91,7 +91,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch DDPG')
     # Set Environment
     parser.add_argument('--mode', default='train', type=str, help='support option: train/test')
-    parser.add_argument('--env', default='gym_ste:StePFilterModEnv-v0', type=str, help='open-ai gym environment')
+    parser.add_argument('--env', default='gym_ste:StePFilterEasyEnv-v0', type=str, help='open-ai gym environment')
     # Set network parameter
     parser.add_argument('--hidden1', default=400, type=int, help='hidden num of first fully connect layer')
     parser.add_argument('--hidden2', default=300, type=int, help='hidden num of second fully connect layer')
@@ -120,7 +120,7 @@ if __name__ == "__main__":
     parser.add_argument('--ou_sigma', default=0.02, type=float, help='Noise sigma')
     parser.add_argument('--ou_mu', default=0.0, type=float, help='Noise mu')
     # User convenience parameter
-    parser.add_argument('--output', default='output_ddpg_pf', type=str, help='Output root')
+    parser.add_argument('--output', default='output_ddpg_mine', type=str, help='Output root')
     parser.add_argument('--debug', dest='debug', action='store_true', help='Debug')
     parser.add_argument('--seed', default=-1, type=int, help='Random seed')
     parser.add_argument('--resume', default='default', type=str, help='Resuming model path for testing')

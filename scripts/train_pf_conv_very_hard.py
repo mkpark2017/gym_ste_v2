@@ -4,7 +4,6 @@ import torch
 import gym
 import numpy as np
 import os
-import math
 from observation_processor import queue
 
 from evaluator import Evaluator
@@ -17,7 +16,7 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
     episode_reward = 0.
     episode_memory = queue()
     obs = None # Observation
-    pf_num = 30
+
     while step < num_iterations:
         #reset if it is the start of episode
         if obs is None:
@@ -28,10 +27,7 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
             agent.reset(obs)
         # Agent pick action
         if step <= args.warmup:
-#            action = agent.random_action()
-            c_x = np.mean(obs[8:8+pf_num]*60)
-            c_y = np.mean(obs[8+pf_num:8+pf_num*2]*60)
-            action = float(math.atan2(c_y,c_x)/math.pi + np.random.rand(1)/10)
+            action = agent.random_action()
         else:
             action = agent.select_action(obs)
         # Env response with next_obs, reward, done, terminate_info

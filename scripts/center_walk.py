@@ -8,7 +8,7 @@ import math
 #import gym_ste.envs
 
 DEBUG = True
-env = gym.make('gym_ste:StePFilterConvVeryHardEnv-v0')
+env = gym.make('gym_ste:StePFilterConvHardEnv2-v0')
 
 for e in range(100):
     obs = env.reset()
@@ -16,13 +16,13 @@ for e in range(100):
     i = 0
     done = False
     env.render_background(mode='human')
-    pf_num = 30
-    while not done and i <= 100:
+    pf_num = 100
+    while not done and i <= 300:
     #while 1:
         i += 1
 #        print(obs[7:17]*55)
-        c_x = np.mean(obs[8:8+pf_num]*60)
-        c_y = np.mean(obs[8+pf_num:8+pf_num*2]*60)
+        c_x = (obs[9] - obs[3])*60
+        c_y = (obs[10] - obs[4])*60
         act = math.atan2(c_y,c_x)/math.pi + np.random.rand(1)/10
 #        act = env.action_space.sample()
         obs, rew, done, info = env.step(act)     # take a random action

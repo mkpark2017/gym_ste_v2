@@ -30,11 +30,12 @@ class StePFilterConvVeryHardEnv(StePFilterConvBaseEnv):
         # self.goal_x = 44
         # self.goal_y = 44
 
-        self.gas_d = self.np_random.uniform(low=5, high=20)                # diffusivity [10m^2/s]
-        self.gas_t = self.np_random.uniform(low=500, high=1500)            # gas life time [1000se$
-        self.gas_q = self.np_random.uniform(low=1500, high=2500)           # gas strength
-        self.wind_mean_phi = self.np_random.uniform(low=0, high=360)        # mean wind direction
-        self.wind_mean_speed = self.np_random.uniform(low=1, high=3)
+        # self.gas_d = self.np_random.uniform(low=8, high=12)                # diffusivity [10m^2/s]
+        # self.gas_t = self.np_random.uniform(low=500, high=1500)            # gas life time [1000se$
+        wind_dir = math.atan2(self.goal_y - self.agent_y, self.goal_x - self.agent_x)/math.pi*180 + 270
+        self.gas_q = self.np_random.uniform(low=1800, high=2200)           # gas strength
+        self.wind_mean_phi = self.np_random.uniform(low=wind_dir-45, high=wind_dir+45)        # mean wind direction
+        # self.wind_mean_speed = self.np_random.uniform(low=1, high=3)
         # self.gas_d = 10                 # diffusivity [10m^2/s]
         # self.gas_t = 1000               # gas life time [1000sec]
         # self.gas_q = 2000               # gas strength
