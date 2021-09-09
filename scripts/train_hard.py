@@ -28,24 +28,18 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
             agent.reset(obs)
         # Agent pick action
         if step <= args.warmup:
-#            print(step)
             action = agent.random_action()
-#            print(action)
-#            print('\n')
-#        elif step <= int(num_iterations/3):
-#            action = agent.select_action(obs)
-#            if step % 100 == 0:
-#                action = agent.random_action()
         else:
             action = agent.select_action(obs)
 #            print(action)
         # Env response with next_obs, reward, done, terminate_info
         obs2, reward, done, info = env.step(action)
+#        print("------------------------------------\n", obs2)
         episode_memory.append(obs2)
         obs2 = episode_memory.getObservation(args.window_length, obs2)
-
+#        print(obs2, "\n===============================================")
         if max_episode_length and episode_steps >= max_episode_length -1:
-            done = True
+            done = True # true if the simulation is ended
         # Agent observe and update policy
         agent.observe(reward, obs2, done)
         if step > args.warmup:
@@ -106,15 +100,15 @@ if __name__ == "__main__":
     parser.add_argument('--init_w', default=0.003, type=float, help='Initial network weight')
     parser.add_argument('--tau', default=0.0001, type=float, help='moving average for target network')
     # Set learning parameter
-    parser.add_argument('--warmup', default=2000000, type=int, help='time without training but only filling the replay memory')
+    parser.add_argument('--warmup', default=1000000, type=int, help='time without training but only filling the replay memory')
     #warmup 5e5
-    parser.add_argument('--rmsize', default=2000000, type=int, help='Memory size, after exceeding this limits, older entries will be replaced by newer ones')
+    parser.add_argument('--rmsize', default=1000000, type=int, help='Memory size, after exceeding this limits, older entries will be replaced by newer ones')
     #repeat memory 1e7
     parser.add_argument('--bsize', default=64, type=int, help='minibatch size')
-    parser.add_argument('--window_length', default=1, type=int, help='Number of observations to be concatenated as "state", (e.g., Atrai game one used this)')
+    parser.add_argument('--window_length', default=10, type=int, help='Number of observations to be concatenated as "state", (e.g., Atrai game one used this)')
     parser.add_argument('--train_iter', default=10000000, type=int, help='Total number of steps for training')
     #tain iter 1e6
-    parser.add_argument('--max_episode_length', default=300, type=int, help='Number of steps for each episode (num_episode = train_iter/max_episode_length')
+    parser.add_argument('--max_episode_length', default=200, type=int, help='Number of steps for each episode (num_episode = train_iter/max_episode_length')
     parser.add_argument('--validate_episodes', default=20, type=int, help='Number of episodes to perform validation')
     parser.add_argument('--validate_steps', default=100000, type=int, help='Validation step interval (only validate each validation step)')
     # validate 2e4
@@ -125,7 +119,7 @@ if __name__ == "__main__":
     parser.add_argument('--ou_sigma', default=0.02, type=float, help='Noise sigma')
     parser.add_argument('--ou_mu', default=0.0, type=float, help='Noise mu')
     # User convenience parameter
-    parser.add_argument('--output', default='output_ddpg_3layers_0809', type=str, help='Output root')
+    parser.add_argument('--output', default='output_ddpg_3layers_0819', type=str, help='Output root')
     parser.add_argument('--debug', dest='debug', action='store_true', help='Debug')
     parser.add_argument('--seed', default=-1, type=int, help='Random seed')
     parser.add_argument('--resume', default='default', type=str, help='Resuming model path for testing')

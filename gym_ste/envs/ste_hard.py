@@ -37,7 +37,7 @@ class SteHardEnv(SteBaseEnv):
         # self.gas_q = self.np_random.uniform(low=1500, high=2500)           # gas strength
         wind_angle = math.atan2(self.goal_y - self.court_ly/2, self.goal_x - self.court_lx/2)/math.pi * 180 + 270
 
-        self.wind_mean_phi = self.np_random.uniform(low=wind_angle-5, high=wind_angle+5)        # mean wind direction
+        self.wind_mean_phi = self.np_random.uniform(low=wind_angle-30, high=wind_angle+30)        # mean wind direction
         self.gas_d = 10                 # diffusivity [10m^2/s]
         self.gas_t = 1000               # gas life time [1000sec]
         self.gas_q = 2000               # gas strength

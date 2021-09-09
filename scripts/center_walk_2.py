@@ -8,7 +8,7 @@ import math
 #import gym_ste.envs
 
 DEBUG = True
-env = gym.make('gym_ste:StePFilterHardEnv-v0')
+env = gym.make('gym_ste:StePFilterConvHardEnv-v0')
 
 for e in range(100):
     obs = env.reset()
@@ -16,7 +16,7 @@ for e in range(100):
     i = 0
     done = False
     env.render_background(mode='human')
-    pf_num = 300
+    pf_num = 100
     while not done and i <= 300:
     #while 1:
         i += 1
@@ -39,3 +39,4 @@ for e in range(100):
 
     print("episode ended with cumulated rew", cumulated_reward, "and done:", done)
     env.close()
+

@@ -126,8 +126,8 @@ class BasicSteEnv(gym.Env):
 
     def _gas_conc(self, pos_x, pos_y): # true gas conectration
         if self.goal_x == pos_x and self.goal_y == pos_y: # to avoid divide by 0
-            pos_x += 1e-3
-            pos_y += 1e-3
+            pos_x += 1e-10
+            pos_y += 1e-10
         dist = self._distance(pos_x, pos_y)
         y_n = -(pos_x - self.goal_x)*math.sin(self.wind_mean_phi*math.pi/180)+ \
                    (pos_y - self.goal_y)*math.cos(self.wind_mean_phi*math.pi/180)

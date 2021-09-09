@@ -10,7 +10,7 @@ from evaluator import Evaluator
 from ddpg import DDPG
 from utils import *
 
-def train(num_iterations, agent, env, evaluate, validate_steps, output, max_episode_length=None, debug=False):
+def train(num_iterations, agent, env, evaluate, validate_interval, output, max_episode_length=None, debug=False):
     agent.is_training = True
     step = episode = episode_steps = 0
     episode_reward = 0.
@@ -27,14 +27,7 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
             agent.reset(obs)
         # Agent pick action
         if step <= args.warmup:
-#            print(step)
             action = agent.random_action()
-#            print(action)
-#            print('\n')
-#        elif step <= int(num_iterations/3):
-#            action = agent.select_action(obs)
-#            if step % 100 == 0:
-#                action = agent.random_action()
         else:
             action = agent.select_action(obs)
 #            print(action)
@@ -45,14 +38,16 @@ def train(num_iterations, agent, env, evaluate, validate_steps, output, max_epis
 
         if max_episode_length and episode_steps >= max_episode_length -1:
             done = True
+
         # Agent observe and update policy
         agent.observe(reward, obs2, done)
         if step > args.warmup:
             agent.update_policy()
         # Evaluation
-        if evaluate is not None and validate_steps > 0 and step % validate_steps == 1 and step > args.warmup:
+#        if evaluate is not None and validate_steps > 0 and step % validate_steps == 1 and step > args.warmup:
+        if evaluate is not None and validate_interval > 0 and episode % validate_interval == 1 and step > args.warmup:
             policy = lambda x: agent.select_action(x, decay_epsilon=False)
-            validate_reward = evaluate(env, policy, debug=False, visualize=True)
+            validate_reward = evaluate(env, policy, episode, debug=False, visualize=True)
             if debug:
                 prRed('[Evaluate] Step_{:07d}: mean_reward:{}'.format(step, validate_reward))
         # Save intermediate model
@@ -91,21 +86,21 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='PyTorch DDPG')
     # Set Environment
     parser.add_argument('--mode', default='train', type=str, help='support option: train/test')
-    parser.add_argument('--env', default='gym_ste:StePFilterConvEasyEnv-v0', type=str, help='open-ai gym environment')
+    parser.add_argument('--env', default='gym_ste:SteHardEnv-v0', type=str, help='open-ai gym environment')
     # Set network parameter
-    parser.add_argument('--hidden1', default=1000, type=int, help='hidden num of first fully connect layer')
-    parser.add_argument('--hidden2', default=400, type=int, help='hidden num of second fully connect layer')
-    parser.add_argument('--hidden3', default=300, type=int, help='hidden num of third fully connect layer')
+    parser.add_argument('--hidden1', default=300, type=int, help='hidden num of first fully connect layer')
+    parser.add_argument('--hidden2', default=64, type=int, help='hidden num of second fully connect layer')
+    parser.add_argument('--hidden3', default=32, type=int, help='hidden num of third fully connect layer')
 
-    parser.add_argument('--rate', default=0.0005, type=float, help='learning rate')
-    parser.add_argument('--prate', default=0.00005, type=float, help='policy net learning rate (only for DDPG)')
-    parser.add_argument('--discount', default=0.99, type=float, help='Discount factor for next Q values')
+    parser.add_argument('--rate', default=0.0001, type=float, help='learning rate')
+    parser.add_argument('--prate', default=0.00001, type=float, help='policy net learning rate (only for DDPG)')
+    parser.add_argument('--discount', default=0.95, type=float, help='Discount factor for next Q values')
     parser.add_argument('--init_w', default=0.003, type=float, help='Initial network weight')
-    parser.add_argument('--tau', default=0.0005, type=float, help='moving average for target network')
+    parser.add_argument('--tau', default=0.0001, type=float, help='moving average for target network')
     # Set learning parameter
-    parser.add_argument('--warmup', default=2000000, type=int, help='time without training but only filling the replay memory')
+    parser.add_argument('--warmup', default=100000, type=int, help='time without training but only filling the replay memory')
     #warmup 5e5
-    parser.add_argument('--rmsize', default=2000000, type=int, help='Memory size, after exceeding this limits, older entries will be replaced by newer ones')
+    parser.add_argument('--rmsize', default=100000, type=int, help='Memory size, after exceeding this limits, older entries will be replaced by newer ones')
     #repeat memory 1e7
     parser.add_argument('--bsize', default=64, type=int, help='minibatch size')
     parser.add_argument('--window_length', default=1, type=int, help='Number of observations to be concatenated as "state", (e.g., Atrai game one used this)')
@@ -113,7 +108,7 @@ if __name__ == "__main__":
     #tain iter 1e6
     parser.add_argument('--max_episode_length', default=300, type=int, help='Number of steps for each episode (num_episode = train_iter/max_episode_length')
     parser.add_argument('--validate_episodes', default=20, type=int, help='Number of episodes to perform validation')
-    parser.add_argument('--validate_steps', default=100000, type=int, help='Validation step interval (only validate each validation step)')
+    parser.add_argument('--validate_interval', default=1000, type=int, help='Validation step interval (only validate each validation step)')
     # validate 2e4
     parser.add_argument('--epsilon', default=8000000, type=int, help='linear decay of exploration policy')
     # epsilon 5e4
@@ -122,7 +117,7 @@ if __name__ == "__main__":
     parser.add_argument('--ou_sigma', default=0.02, type=float, help='Noise sigma')
     parser.add_argument('--ou_mu', default=0.0, type=float, help='Noise mu')
     # User convenience parameter
-    parser.add_argument('--output', default='output_ddpg_pf_3layers', type=str, help='Output root')
+    parser.add_argument('--output', default='output_ddpg_pf_3layers_150points', type=str, help='Output root')
     parser.add_argument('--debug', dest='debug', action='store_true', help='Debug')
     parser.add_argument('--seed', default=-1, type=int, help='Random seed')
     parser.add_argument('--resume', default='default', type=str, help='Resuming model path for testing')
@@ -146,7 +141,7 @@ if __name__ == "__main__":
     evaluate = Evaluator(args)
 
     if args.mode == 'train':
-        train(args.train_iter, agent, env, evaluate, args.validate_steps, args.output, args.max_episode_length, debug=True)
+        train(args.train_iter, agent, env, evaluate, args.validate_interval, args.output, args.max_episode_length, debug=True)
 
     elif args.mode == 'test':
         test(args.validate_episodes, agent, env, evaluate, args.resume, visualize=True, debug=args.debug)

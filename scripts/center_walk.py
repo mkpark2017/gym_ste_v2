@@ -8,7 +8,7 @@ import math
 #import gym_ste.envs
 
 DEBUG = True
-env = gym.make('gym_ste:StePFilterConvHardEnv2-v0')
+env = gym.make('gym_ste:StePFilterConvHardEnv-v0')
 
 for e in range(100):
     obs = env.reset()
@@ -16,7 +16,7 @@ for e in range(100):
     i = 0
     done = False
     env.render_background(mode='human')
-    pf_num = 100
+    pf_num = 20
     while not done and i <= 300:
     #while 1:
         i += 1

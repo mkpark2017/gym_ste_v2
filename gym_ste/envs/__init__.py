@@ -13,9 +13,28 @@ from gym_ste.envs.ste_pf_converge_easy import StePFilterConvEasyEnv
 from gym_ste.envs.ste_pf_converge_hard import StePFilterConvHardEnv
 from gym_ste.envs.ste_pf_converge_very_hard import StePFilterConvVeryHardEnv
 
-from gym_ste.envs.ste_pf_easy2 import StePFilterEasyEnv2
-from gym_ste.envs.ste_pf_converge_hard_2 import StePFilterConvHardEnv2
-from gym_ste.envs.ste_pf_converge_hard_3 import StePFilterConvHardEnv3
-from gym_ste.envs.ste_pf_hard_2 import StePFilterHardEnv2
+from gym_ste.envs.ste_pf_relative_converge_hard import StePFilterRelativeConvHardEnv
+from gym_ste.envs.ste_pf_relative_converge_very_hard import StePFilterRelativeConvVeryHardEnv
+
+
+from gym_ste.envs.ste_pf_converge_center_hard import StePFilterConvCenterHardEnv
+from gym_ste.envs.ste_pf_converge_center_very_hard import StePFilterConvCenterVeryHardEnv
+from gym_ste.envs.ste_pf_converge_center_extreme import StePFilterConvCenterExtremeEnv
+
+from gym_ste.envs.ste_pf_relative_converge_center_very_hard import StePFilterRelativeConvCenterVeryHardEnv
+
+
+from gym_ste.envs.ste_pf_converge_infotaxis_very_hard import StePFilterConvInfotaxisVeryHardEnv
+from gym_ste.envs.ste_pf_converge_infotaxis_hard import StePFilterConvInfotaxisHardEnv
+
+
+#from gym_ste.envs.ste_pf_easy2 import StePFilterEasyEnv2
+#from gym_ste.envs.ste_pf_converge_hard_2 import StePFilterConvHardEnv2
+#from gym_ste.envs.ste_pf_converge_hard_3 import StePFilterConvHardEnv3
+#from gym_ste.envs.ste_pf_hard_2 import StePFilterHardEnv2
+
+from gym_ste.envs.ste_est_hard import SteEstHardEnv
+
+#from gym_ste.envs.ste_negative_hard import SteNegativeHardEnv
 
 # from gym_ste.envs.ste_easy import SteEasy

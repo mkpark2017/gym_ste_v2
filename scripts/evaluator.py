@@ -14,7 +14,7 @@ class Evaluator(object):
 
     def __init__(self, args):
         self.num_episodes = args.validate_episodes
-        self.interval = args.validate_steps
+        self.interval = args.validate_interval
         self.max_episode_length = args.max_episode_length
         self.window_length = args.window_length
         self.save_path = args.output
@@ -22,8 +22,8 @@ class Evaluator(object):
         self.result = []
         self.pause_t = args.pause_time
 
-    def __call__(self, env, policy, debug=False, visualize=False, save=True):
-
+    def __call__(self, env, policy, episode, debug=False, visualize=False, save=True):
+        self.episode = episode
         self.is_training = False
         episode_memory = queue()
         observation = None
@@ -95,6 +95,7 @@ class Evaluator(object):
         ax.errorbar(x, y, yerr=error, fmt='-o')
         plt.savefig(fn+'.png')
         savemat(fn+'.mat', {'reward':self.results})
-        writer.add_scalar("Mean Reward/train", y_single, self.results.shape[1]*self.interval)
+#        writer.add_scalar("Mean Reward/train", y_single, self.results.shape[1]*self.interval)
+        writer.add_scalar("Mean Reward/train", y_single, self.episode)
         writer.flush()
 

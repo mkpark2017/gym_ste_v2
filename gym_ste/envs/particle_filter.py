@@ -1,145 +1,161 @@
-import psutil
-import ray
 import numpy as np
 import math
 
-#num_cpus = psutil.cpu_count(logical=False)
-#ray.init(num_cpus=num_cpus)
-
-
-def pf_gas_conc(args, i): # true gas conectration
-    pos_x = args.agent_x
-    pos_y = args.agent_y
-    source_x = args.pf_x[i]
-    source_y = args.pf_y[i]
-    source_q = args.pf_q[i]
-    if source_x == pos_x and source_y == pos_y: # to avoid divide by 0
-        pos_x += 1e-3
-        pos_y += 1e-3
-    dist = math.sqrt(pow((source_x - pos_x), 2) + pow(source_y - pos_y, 2))
-    y_n = -(pos_x - source_x)*math.sin(args.wind_mean_phi*math.pi/180)+ \
-           (pos_y - source_y)*math.cos(args.wind_mean_phi*math.pi/180)
-    lambda_plume = math.sqrt(args.gas_d * args.gas_t / (1 + pow(args.wind_mean_speed,2) * args.gas_t/4/args.gas_d) )
-    conc = source_q/(4 * math.pi * args.gas_d * dist) * np.exp(-y_n * args.wind_mean_speed/(2*args.gas_d) - dist/lambda_plume)
-    return conc
-
-@ray.remote
-def weight_update(args, i):
-    pf_conc = pf_gas_conc(args, i)
-    pdetSig = math.sqrt( pow((args.gas_measure*args.sensor_sig_m),2) + pow(args.env_sig,2) )
-    pdetSig_sq = pow(pdetSig, 2)
-    if pdetSig_sq < 1e-100:
-        pdetSig_sq = 1e-100
-
-    p_val = (args.gas_measure - pf_conc)/pdetSig
-    p_new = 1/(math.sqrt(2*math.pi)*pdetSig_sq)*np.exp(-pow(p_val,2)/2)
-    if p_new == 0:
-        p_new = 1e-100
-
-    return p_new
-
-
 class ParticleFilter:
-    def __init__(self, args):
-#        num_cpus = psutil.cpu_count(logical=False)
- #       ray.init(num_cpus=num_cpus)
 
-        self.agent_x = args.agent_x
-        self.agent_y = args.agent_y
-        self.pf_x = args.pf_x
-        self.pf_y = args.pf_y
-        self.pf_q = args.pf_q
-        self.gas_measure = args.gas_measure
+    def __init__(self, args):
+        self.update_count = 0
         self.sensor_sig_m = args.sensor_sig_m
         self.env_sig = args.env_sig
-        self.Wpnorms = args.Wpnorms
-        self.np_random = args.np_random
-        
-        self.court_lx = args.court_lx
-        self.court_ly = args.court_ly
         self.pf_num = args.pf_num
-        self.Wps = args.Wps
-        
-        self.wind_mean_phi = args.wind_mean_phi
-        self.wind_mean_speed = args.wind_mean_speed
+
+#        self.wind_d = args.wind_d
+#        self.wind_s = args.wind_s
         self.gas_d = args.gas_d
         self.gas_t = args.gas_t
+
+        self.court_lx = args.court_lx
+        self.court_ly = args.court_ly
+
+        self.pf_x = np.ones(self.pf_num)*np.nan
+        self.pf_y = np.ones(self.pf_num)*np.nan
+        self.pf_q = np.ones(self.pf_num)*np.nan
+        self.Wpnorms = np.ones(self.pf_num)*np.nan
+
+
+    def _pf_gas_conc(self, source_x, source_y, source_q): # true gas conectration
+        avoid_zero = (np.sqrt(pow(source_x - self.agent_x,2) + pow(source_y - self.agent_y,2) ) < 1e-50) 
+        source_x[avoid_zero] += 1e-50
+        source_y[avoid_zero] += 1e-50
+
+        dist = np.sqrt(pow((source_x - self.agent_x), 2) + pow(source_y - self.agent_y, 2))
+        y_n = -(self.agent_x - source_x)*np.sin(self.wind_d*math.pi/180)+ \
+               (self.agent_y - source_y)*math.cos(self.wind_d*math.pi/180)
+        lambda_plume = math.sqrt(self.gas_d * self.gas_t / (1 + pow(self.wind_s,2) * self.gas_t/4/self.gas_d) )
+        conc_com_1 = source_q/(4 * math.pi * self.gas_d * dist) 
+        conc_com_2 = np.exp( -y_n * self.wind_s/(2*self.gas_d) - dist/lambda_plume)
+        conc = conc_com_1 * conc_com_2
+        return conc
         
-        self._particle_filter()
+
+    def _weight_calculate(self, gas_measure, agent_x, agent_y, pf_x, pf_y, pf_q, wind_d, wind_s):
+        self.gas_measure = gas_measure
+        self.agent_x = agent_x
+        self.agent_y = agent_y
+        self.wind_d = wind_d
+        self.wind_s = wind_s
+
+        pf_conc = self._pf_gas_conc(pf_x, pf_y, pf_q)
+        mean_conc = (pf_conc + self.gas_measure)/2
+        pdetSig = np.sqrt( pow((mean_conc*self.sensor_sig_m),2) + pow(self.env_sig,2) )
+        #if pdetSig < 1e-100: pdetSig = 1e-100
+        pdetSig[pdetSig < 1e-100] = 1e-100
+        pdetSig_sq = pow(pdetSig, 2)
+        gauss_val = (self.gas_measure - pf_conc)/pdetSig
+        gauss_new = 1/(math.sqrt(2*math.pi)*pdetSig_sq)*np.exp(-pow(gauss_val,2)/2)
         
-
-    def _resample(self, gauss_new):
-        N = self.Wpnorms.size
-        M = N
-        indx = np.ones(N)*-1
-        Q = np.cumsum(self.Wpnorms)
-        indx = np.zeros(N)
-        T = np.arange(N)/N + self.np_random.uniform(low=np.zeros(N), high=np.ones(N)/N)
-        i=1
-        j=1
-        while(i<N and j<M):
-            while(Q[j] < T[i]):
-                j = j+1
-            indx[i]=j
-            i=i+1
-
-        indx = np.int64(indx)
-        for i in range(0,N):
-            self.pf_x[i] = self.pf_x[indx[i]]
-            self.pf_y[i] = self.pf_y[indx[i]]
-            self.pf_q[i] = self.pf_q[indx[i]]
-
-        mm = 2
-        A=pow(4/(mm+2), 1/(mm+4) )
-        cx = 4*math.pi/3
-        hopt = A*pow(A,-1/(mm+4))
-        for _ in range(3):
-            CovXxp = np.var(self.pf_x)
-            CovXyp = np.var(self.pf_y)
-            CovXqp = np.var(self.pf_q)
-
-            dkXxp = math.sqrt(CovXxp)+0.01
-            dkXyp = math.sqrt(CovXyp)+0.01
-            dkXqp = math.sqrt(CovXqp)+0.01
-            nXxp = self.pf_x + (hopt*dkXxp*np.random.normal(0,1,self.pf_num) )
-            nXxp[nXxp>self.court_lx] = self.court_lx # out of area
-            nXxp[nXxp<0] = 0 # out of area
-            nXyp = self.pf_y + (hopt*dkXyp*np.random.normal(0,1,self.pf_num) )
-            nXyp[nXyp>self.court_ly] = self.court_ly # out of area
-            nXyp[nXyp<0] = 0 # out of area
-            nXqp = self.pf_q + (hopt*dkXqp*np.random.normal(0,1,self.pf_num) )
-            nXqp[nXqp<0] = 0 # out of range
-
-            n_new = [weight_update.remote(self,i) for i in range(0,N)]
-            n_new = ray.get(n_new)
-            for i in range(0,N):
-                # n_new.append(weight_update(i))
-                alpha = n_new[i]/gauss_new[indx[i]]
-                mcrand = np.random.uniform(0,1,1)
-                if alpha > mcrand:
-                    self.pf_x[i] = nXxp[i]
-                    self.pf_y[i] = nXyp[i]
-                    self.pf_q[i] = nXqp[i]
-
-        self.Wpnorms = np.ones(self.pf_num)/self.pf_num
+        gauss_new[gauss_new != gauss_new] = 1e-200
+        gauss_new[gauss_new < 1e-200] = 1e-200
+        return gauss_new
 
 
-    def _particle_filter(self):
-        pf_concs = []
+    def _particle_resample(self, gauss_new):
+            N = self.pf_num
+            M = N
+            indx = np.ones(N)*-1
+            Q = np.cumsum(self.Wpnorms)
+            indx = np.zeros(N)
+            T = np.arange(N)/N + np.random.uniform(0,1/N, N)
+            i=0
+            j=0
+            while(i<N and j<M):
+                while(Q[j] < T[i]):
+                    j = j+1
+                indx[i]=j
+                i=i+1
+
+            indx = np.int64(indx)
+            
+            self.pf_x = self.pf_x[indx]
+            self.pf_y = self.pf_y[indx]
+            self.pf_q = self.pf_q[indx]
+
+            mm = 2
+            A=pow(4/(mm+2), 1/(mm+4) )
+            cx = 4*math.pi/3
+            hopt = A*pow(A,-1/(mm+4))
+            for _ in range(1):
+                CovXxp = np.var(self.pf_x)
+                CovXyp = np.var(self.pf_y)
+                CovXqp = np.var(self.pf_q)
+
+                dkXxp = math.sqrt(CovXxp)+0.5
+                dkXyp = math.sqrt(CovXyp)+0.5
+                dkXqp = math.sqrt(CovXqp)+0.5
+
+                nXxp = self.pf_x + (hopt*dkXxp*np.random.normal(0,1,self.pf_num) )
+                nXxp[nXxp>self.court_lx] = self.court_lx # out of area
+                nXxp[nXxp<0] = 0 # out of area
+
+                nXyp = self.pf_y + (hopt*dkXyp*np.random.normal(0,1,self.pf_num) )
+                nXyp[nXyp>self.court_ly] = self.court_ly # out of area
+                nXyp[nXyp<0] = 0 # out of area
+
+                nXqp = self.pf_q + (hopt*dkXqp*np.random.normal(0,1,self.pf_num) )
+                nXqp[nXqp<0] = 0 # out of range
+
+                n_new = self._weight_calculate(self.gas_measure, self.agent_x, self.agent_y, nXxp, nXyp, nXqp, self.wind_d, self.wind_s)
+                alpha = n_new/gauss_new[indx]
+                mcrand = np.random.uniform(0,1,self.pf_num)
+#                print(alpha > mcrand)
+                new_point_bool = alpha > mcrand
+                self.pf_x[new_point_bool] = nXxp[new_point_bool]
+                self.pf_y[new_point_bool] = nXyp[new_point_bool]
+                self.pf_q[new_point_bool] = nXqp[new_point_bool]
+            self.Wpnorms = np.ones(self.pf_num)/self.pf_num
+            
+
+    def _weight_update(self, measure, agent_x, agent_y, pf_x, pf_y, pf_q, Wpnorms, wind_d, wind_s):
+        self.update_count += 1
         Wp_sum = 0
-        gauss_new = [weight_update.remote(self,i) for i in range(0,self.pf_num)]
-        gauss_new = ray.get(gauss_new)
-        for i in range(0,self.pf_num):
-            Wpnorm = self.Wpnorms[i]
-            Wp = Wpnorm * gauss_new[i]
-            self.Wps[i] = Wp
-            Wp_sum += Wp
+        resample_true = False
 
-        self.Wpnorms = self.Wps/Wp_sum
-        if 1/sum(pow(self.Wpnorms,2)) < self.pf_num*0.5: # 1 for every time
-#            print("-------------------------------------")
-#            print("resample")
-#            print("-------------------------------------")
-            self._resample(gauss_new)
+        self.wind_d = wind_d
+        self.wind_s = wind_s
+        self.agent_x = agent_x
+        self.agent_y = agent_y
+        self.gas_measure = measure
 
-        return [np.array(self.pf_x), np.array(self.pf_y), np.array(self.pf_q), np.array(self.Wps), np.array(self.Wpnorms)]
+        pf_conc = self._pf_gas_conc(pf_x, pf_y, pf_q)
+        mean_conc = (pf_conc + self.gas_measure)/2
+        pdetSig = np.sqrt( pow((mean_conc*self.sensor_sig_m),2) + pow(self.env_sig,2) )
+        #if pdetSig < 1e-100: pdetSig = 1e-100
+        pdetSig[pdetSig < 1e-100] = 1e-100
+        pdetSig_sq = pow(pdetSig, 2)
+        gauss_val = (self.gas_measure - pf_conc)/pdetSig
+        gauss_new = 1/(math.sqrt(2*math.pi)*pdetSig_sq)*np.exp(-pow(gauss_val,2)/2)
+        
+        gauss_new[gauss_new != gauss_new] = 1e-200
+        gauss_new[gauss_new < 1e-200] = 1e-200
+
+        sort_g = np.sort(gauss_new)
+        if (sort_g[self.pf_num-1] == sort_g[0] or self.update_count == 10): resample_true = True
+        Wps = Wpnorms * gauss_new
+        Wp_sum = np.sum(Wps)
+
+        Wpnorms = Wps/Wp_sum
+
+        self.pf_x = pf_x
+        self.pf_y = pf_y
+        self.pf_q = pf_q
+        self.Wpnorms = Wpnorms
+
+        if 1/sum(pow(Wpnorms,2)) < self.pf_num*0.5 or resample_true: # 1 for every time
+            self.update_count = 0
+            self._particle_resample(gauss_new)
+            #self.CovXxp = np.var(self.pf_x)
+            #self.CovXyp = np.var(self.pf_y)
+            #self.CovXqp = np.var(self.pf_q)
+
+        return self.pf_x, self.pf_y, self.pf_q, self.Wpnorms
+

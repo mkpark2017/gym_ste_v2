@@ -40,9 +40,9 @@ class StePFilterConvBaseEnv(StePFilterBaseEnv):
         rew = 0
         if self.outborder: # Agent get out to search area
            rew += self._border_reward()
-        reach_source_done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
-        if reach_source_done:
-           rew += 100
+#        reach_source_done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
+#        if reach_source_done:
+#           rew += 100
 
         pf_center = np.array([np.mean(self.pf_x), np.mean(self.pf_y)])
         nearby = math.sqrt( pow(pf_center[0]-self.goal_x,2) + pow(pf_center[1]-self.goal_y,2) )
