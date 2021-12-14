@@ -29,7 +29,7 @@ class StePFilterConvBaseEnv(StePFilterBaseEnv):
 
         self.last_action = action
 
-        x_warning, y_warning = self._boundary_warning_sensor()
+        #x_warning, y_warning = self._boundary_warning_sensor()
 
         # done for step rewarding
         agent_dist = self.agent_v*self.delta_t
@@ -40,9 +40,6 @@ class StePFilterConvBaseEnv(StePFilterBaseEnv):
         rew = 0
         if self.outborder: # Agent get out to search area
            rew += self._border_reward()
-#        reach_source_done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
-#        if reach_source_done:
-#           rew += 100
 
         pf_center = np.array([np.mean(self.pf_x), np.mean(self.pf_y)])
         nearby = math.sqrt( pow(pf_center[0]-self.goal_x,2) + pow(pf_center[1]-self.goal_y,2) )
@@ -52,14 +49,6 @@ class StePFilterConvBaseEnv(StePFilterBaseEnv):
             nearby_bool = bool(nearby<agent_dist*2)
             if nearby_bool:
                 rew = self._reward_goal_reached()
-#            else:
-#                rew = self._reward_goal_reached()/2
-#            else:
-#                rew = self._reward_failed()
-
-#        source_done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
-#        if source_done:
-#            rew = self._reward_goal_reached()
 
         terminate_done = bool(self.count_actions >= self.max_step)
 #        if terminate_done: # Reach the max_step without finding source

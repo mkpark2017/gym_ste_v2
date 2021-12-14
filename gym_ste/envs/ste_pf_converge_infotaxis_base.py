@@ -15,6 +15,9 @@ class StePFilterConvInfotaxisBaseEnv(StePFilterBaseEnv):
     def __init__(self):
         StePFilterBaseEnv.__init__(self)
 
+        self.agent_v = 6                # 2m/s
+        self.agent_dist = self.agent_v * self.delta_t
+
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         self.pf_low_state_q = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -43,9 +46,10 @@ class StePFilterConvInfotaxisBaseEnv(StePFilterBaseEnv):
 
     def _observation(self):
         self.wind_d, self.wind_s = self._wind_sensor() # wind direction & speed
+        #print("env_wind_d: ", self.wind_d)
         moved_dist = math.sqrt(pow(self.last_x - self.agent_x,2) + pow(self.last_y - self.agent_y,2))
 #        print("------------------------------------------------------")
-        self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
+        self.gas_measure = self._gas_measure()
 #        self._particle_filter()
         self.pf_x, self.pf_y, self.pf_q, self.Wpnorms = self.particle_filter._weight_update(self.gas_measure, self.agent_x, self.agent_y,
                                                                                             self.pf_x, self.pf_y, self.pf_q, self.Wpnorms,
@@ -57,10 +61,10 @@ class StePFilterConvInfotaxisBaseEnv(StePFilterBaseEnv):
 
         # x_warning, y_warning = self._boundary_warning_sensor()
 
-        etc_state = np.array([float(self.agent_dist), float(self.gas_d), float(self.gas_t), float(self.court_lx), float(self.court_ly), float(self.pf_num), float(self.sensor_sig_m), float(self.env_sig),
+        etc_state = np.array([float(self.agent_v*self.delta_t), float(self.gas_d), float(self.gas_t), float(self.court_lx), float(self.court_ly), float(self.pf_num), float(self.sensor_sig_m), float(self.env_sig),
                               float(self.wind_d/math.pi), float(self.wind_s), float(self.dur_t), float(self.agent_x), float(self.agent_y),
                               float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
-
+        # wind_d [radian]
         return np.concatenate((etc_state, self.pf_x, self.pf_y, self.pf_q, self.Wpnorms), axis=None)
 
 
@@ -76,13 +80,16 @@ class StePFilterConvInfotaxisBaseEnv(StePFilterBaseEnv):
 
         self.last_action = action
 
+        #print("agnet_x: ", self.agent_x, "       |       agent_y: ", self.agent_y)
+
+
+
         #x_warning, y_warning = self._boundary_warning_sensor()
 
         # done for step rewarding
-        agent_dist = self.agent_v*self.delta_t
         self.cov_val = np.sqrt(self.CovXxp + self.CovXyp)
-        converge_done = bool(self.cov_val < agent_dist/2)
-        done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
+        converge_done = bool(self.cov_val < 1)
+        #done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
 
         rew = 0
         if self.outborder: # Agent get out to search area
@@ -93,7 +100,7 @@ class StePFilterConvInfotaxisBaseEnv(StePFilterBaseEnv):
         if not converge_done:
             rew += self._step_reward()
         else: # particle filter is converged
-            nearby_bool = bool(nearby<agent_dist*2)
+            nearby_bool = bool(nearby<2)
             if nearby_bool:
                 rew = self._reward_goal_reached()
 

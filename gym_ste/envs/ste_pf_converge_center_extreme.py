@@ -32,7 +32,7 @@ class StePFilterConvCenterExtremeEnv(StePFilterConvCenterBaseEnv):
         # self.goal_x = 44
         # self.goal_y = 44
 
-        self.gas_d = self.np_random.uniform(low=1, high=20)                # diffusivity [10m^2/s]
+        self.gas_d = self.np_random.uniform(low=5, high=15)                # diffusivity [10m^2/s]
         self.gas_t = self.np_random.uniform(low=500, high=1500)            # gas life time [1000se$
         self.gas_q = self.np_random.uniform(low=1000, high=3000)           # gas strength
         # wind_angle = math.atan2(self.goal_y - self.court_ly/2, self.goal_x - self.court_lx/2)/math.pi * 180 + 270

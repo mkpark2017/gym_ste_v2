@@ -101,6 +101,10 @@ class BasicSteEnv(gym.Env):
         self.scale = self.screen_width/self.court_lx
         self.true_conc = np.zeros((self.court_lx, self.court_ly))
 
+
+        self.env_sig = 0.1 #0.4
+        self.sensor_sig_m = 0.05 #0.2;
+
         # set a seed and reset the environment
         # self.seed()
         # self.reset()
@@ -108,14 +112,14 @@ class BasicSteEnv(gym.Env):
     def _distance(self, pose_x, pose_y):
         return math.sqrt(pow((self.goal_x - pose_x), 2) + pow(self.goal_y - pose_y, 2))
 
-    def _wind_sensor(self):
-        wind_degree_fluc = 1.5 #degree
-        wind_speed_fluc = 0.1
-        wind_dir = self.np_random.uniform(low=(self.wind_mean_phi-wind_degree_fluc)*math.pi/180, 
-                                         high=(self.wind_mean_phi+wind_degree_fluc)*math.pi/180)
-        wind_speed = self.np_random.uniform(low=self.wind_mean_speed-wind_speed_fluc, 
-                                            high=self.wind_mean_speed+wind_speed_fluc)
-        return wind_dir, wind_speed
+#    def _wind_sensor(self):
+#        wind_degree_fluc = 1.5 #degree
+#        wind_speed_fluc = 0.1
+#        wind_dir = self.np_random.uniform(low=(self.wind_mean_phi-wind_degree_fluc)*math.pi/180, 
+#                                         high=(self.wind_mean_phi+wind_degree_fluc)*math.pi/180)
+#        wind_speed = self.np_random.uniform(low=self.wind_mean_speed-wind_speed_fluc, 
+#                                            high=self.wind_mean_speed+wind_speed_fluc)
+#        return wind_dir, wind_speed
 
     #  extra rewarding reaching the goal and learning to do this by few steps as possible
     def _reward_goal_reached(self):
@@ -129,39 +133,43 @@ class BasicSteEnv(gym.Env):
             pos_x += 1e-10
             pos_y += 1e-10
         dist = self._distance(pos_x, pos_y)
+        #print("true wind_d: ", self.wind_mean_phi*math.pi/180)
         y_n = -(pos_x - self.goal_x)*math.sin(self.wind_mean_phi*math.pi/180)+ \
                    (pos_y - self.goal_y)*math.cos(self.wind_mean_phi*math.pi/180)
         lambda_plume = math.sqrt(self.gas_d * self.gas_t / (1 + pow(self.wind_mean_speed,2) * self.gas_t/4/self.gas_d) )
-        conc = self.gas_q/(4 * math.pi * self.gas_d * dist) * np.exp(-y_n * self.wind_mean_speed/(2*self.gas_d) - dist/lambda_plume)
+        conc = self.gas_q/(4 * math.pi * self.gas_d * dist) * np.exp(-y_n * self.wind_mean_speed/(2*self.gas_d) - dist/lambda_plume) - self.conc_eps
+        if conc < 0:
+            conc = 0
+
         return conc
 
-    def _gas_measure(self, pos_x, pos_y):
-        env_sig = 0.02 #0.4
-        sensor_sig_m = 0.01 #0.2;
+    def _gas_measure(self):
         conc = self._gas_conc(self.agent_x, self.agent_y)
-        conc_env = self.np_random.normal(conc,env_sig)
+        conc_env = self.np_random.normal(conc,self.env_sig)
+        #print(self.sensor_sig_m)
         while conc_env < 0:
-            conc_env = self.np_random.normal(conc,env_sig)
-        gas_measure = self.np_random.normal(conc_env, conc_env*sensor_sig_m)
+            conc_env = self.np_random.normal(conc,self.env_sig)
+        gas_measure = self.np_random.normal(conc_env, conc_env*self.sensor_sig_m)
         while gas_measure < 0:
-            gas_measure = self.np_random.normal(conc_env, conc_env*sensor_sig_m)
+            gas_measure = self.np_random.normal(conc_env, conc_env*self.sensor_sig_m)
 
         return gas_measure
 
-    def _step_reward(self):
+
+#    def _step_reward(self):
 #        self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
 #        print(gas_measure)
-        if self.gas_measure > self.conc_eps: # need to be adjusted for different source condition
-            reward = 1
-            self.dur_t = 0
-        else:
-            reward = 0
-            self.dur_t += 1
-        return reward
+#        if self.gas_measure > self.conc_eps: # need to be adjusted for different source condition
+#            reward = 1
+#            self.dur_t = 0
+#        else:
+#            reward = 0
+#            self.dur_t += 1
+#        return reward
 
-    def _border_reward(self):
-        reward = -100
-        return reward
+#    def _border_reward(self):
+#        reward = -100
+#        return reward
 
     # not normalize [local flow velocity (x,y) [m/s], last sampling location (x,y), t-t_last, last action (only direction)
     def _observation(self):
@@ -291,7 +299,10 @@ class BasicSteEnv(gym.Env):
             max_conc = 100;
             width = 1*self.scale
             height = 1*self.scale
+#            conc_mat = []
+
             for xx in range(self.court_lx):
+#                conc_mat_temp = []
                 for yy in range(self.court_ly):
                     conc = self._gas_conc(xx+0.5, yy+0.5)
                     x = xx*self.scale
@@ -300,10 +311,12 @@ class BasicSteEnv(gym.Env):
                         conc = max_conc
                         color = cm.jet(255) # 255 is maximum number
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
-                    elif conc > self.conc_eps:
+                    elif conc > 0:
                         color = cm.jet(round(math.log(conc+1)/math.log(max_conc+1)*255))
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
-
+#                    conc_mat_temp.append(round(conc,2))
+#                conc_mat.append(conc_mat_temp)
+#            print(conc_mat)
             return self.background_viewer.render(return_rgb_array=mode == 'rgb_array')
 
 

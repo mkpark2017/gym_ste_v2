@@ -17,6 +17,9 @@ class StePFilterConvCenterBaseEnv(StePFilterBaseEnv):
     def __init__(self):
         StePFilterBaseEnv.__init__(self)
 
+        self.agent_v = 10                # 2m/s
+        self.agent_dist = self.agent_v * self.delta_t
+
         self.obs_low_state = np.array([-1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 0, 0, 0]) # [wind_direction, wind speed (m/s), duration time, current pos (x,y), last action (direction), last concentration, concentration, highest conc, mean_x, mean_y, cov_x, cov_y]
         self.obs_high_state = np.array([1, 20,  self.max_step, self.court_lx, self.court_ly, 1, self.conc_max, self.conc_max, self.conc_max, self.court_lx, self.court_ly, pow(self.court_lx,2), pow(self.court_ly,2)])
         
@@ -30,15 +33,15 @@ class StePFilterConvCenterBaseEnv(StePFilterBaseEnv):
         self.wind_d, self.wind_s = self._wind_sensor() # wind direction & speed
         moved_dist = math.sqrt(pow(self.last_x - self.agent_x,2) + pow(self.last_y - self.agent_y,2))
 #        print("------------------------------------------------------")
-        self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
-        self._particle_filter()
-#        self.pf_x, self.pf_y, self.pf_q, self.Wpnorms = self.particle_filter._weight_update(self.gas_measure, self.agent_x, self.agent_y,
-#                                                                                            self.pf_x, self.pf_y, self.pf_q, self.Wpnorms,
-#                                                                                            self.wind_d, self.wind_s)
+        self.gas_measure = self._gas_measure()
+#        self._particle_filter()
+        self.pf_x, self.pf_y, self.pf_q, self.Wpnorms = self.particle_filter._weight_update(self.gas_measure, self.agent_x, self.agent_y,
+                                                                                            self.pf_x, self.pf_y, self.pf_q, self.Wpnorms,
+                                                                                            self.wind_d, self.wind_s)
 
-#        self.CovXxp = np.var(self.pf_x)
-#        self.CovXyp = np.var(self.pf_y)
-#        self.CovXqp = np.var(self.pf_q)
+        self.CovXxp = np.var(self.pf_x)
+        self.CovXyp = np.var(self.pf_y)
+        self.CovXqp = np.var(self.pf_q)
 
 #        x_warning, y_warning = self._boundary_warning_sensor()
         mean_x = sum(self.pf_x * self.Wpnorms)
@@ -47,6 +50,7 @@ class StePFilterConvCenterBaseEnv(StePFilterBaseEnv):
         return np.array([float(self.wind_d/math.pi), float(self.wind_s), float(self.dur_t), float(self.agent_x), float(self.agent_y), float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc), float(mean_x), float(mean_y), float(self.CovXxp), float(self.CovXyp)])
 
     def step(self, action):
+        #print(self.env_sig)
         self.warning = False
         self.outborder = False
         self.count_actions += 1
@@ -55,12 +59,12 @@ class StePFilterConvCenterBaseEnv(StePFilterBaseEnv):
 
         self.last_action = action
 
-        x_warning, y_warning = self._boundary_warning_sensor()
+        #x_warning, y_warning = self._boundary_warning_sensor()
 
         # done for step rewarding
         agent_dist = self.agent_v*self.delta_t
         self.cov_val = np.sqrt(self.CovXxp + self.CovXyp)
-        converge_done = bool(self.cov_val < agent_dist/2)
+        converge_done = bool(self.cov_val < 1)
         done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
 
         rew = 0
@@ -72,7 +76,7 @@ class StePFilterConvCenterBaseEnv(StePFilterBaseEnv):
         if not converge_done:
             rew += self._step_reward()
         else: # particle filter is converged
-            nearby_bool = bool(nearby<agent_dist*2)
+            nearby_bool = bool(nearby<1)
             if nearby_bool:
                 rew = self._reward_goal_reached()
 
@@ -84,6 +88,11 @@ class StePFilterConvCenterBaseEnv(StePFilterBaseEnv):
 
         # track, where agent was
         self.positions.append([self.agent_x, self.agent_y])
+        self.measures.append(self.gas_measure)
+        self.agent_xs.append(self.agent_x)
+        self.agent_ys.append(self.agent_y)
+
+
         self.last_x = self.agent_x
         self.last_y = self.agent_y
 

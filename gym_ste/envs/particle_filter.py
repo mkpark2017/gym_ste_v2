@@ -6,7 +6,9 @@ class ParticleFilter:
     def __init__(self, args):
         self.update_count = 0
         self.sensor_sig_m = args.sensor_sig_m
+#        print("sig_m: ", self.sensor_sig_m)
         self.env_sig = args.env_sig
+#        print("env_sig: ", self.env_sig)
         self.pf_num = args.pf_num
 
 #        self.wind_d = args.wind_d
@@ -23,17 +25,17 @@ class ParticleFilter:
         self.Wpnorms = np.ones(self.pf_num)*np.nan
 
 
-    def _pf_gas_conc(self, source_x, source_y, source_q): # true gas conectration
-        avoid_zero = (np.sqrt(pow(source_x - self.agent_x,2) + pow(source_y - self.agent_y,2) ) < 1e-50) 
+    def _pf_gas_conc(self, agent_x, agent_y, source_x, source_y, source_q, wind_d, wind_s): # true gas conectration
+        avoid_zero = (np.sqrt(pow(source_x - agent_x,2) + pow(source_y - agent_y,2) ) < 1e-50) 
         source_x[avoid_zero] += 1e-50
         source_y[avoid_zero] += 1e-50
 
-        dist = np.sqrt(pow((source_x - self.agent_x), 2) + pow(source_y - self.agent_y, 2))
-        y_n = -(self.agent_x - source_x)*np.sin(self.wind_d*math.pi/180)+ \
-               (self.agent_y - source_y)*math.cos(self.wind_d*math.pi/180)
-        lambda_plume = math.sqrt(self.gas_d * self.gas_t / (1 + pow(self.wind_s,2) * self.gas_t/4/self.gas_d) )
+        dist = np.sqrt(pow((source_x - agent_x), 2) + pow(source_y - agent_y, 2))
+        y_n = -(agent_x - source_x)*math.sin(wind_d)+ \
+               (agent_y - source_y)*math.cos(wind_d)
+        lambda_plume = math.sqrt(self.gas_d * self.gas_t / (1 + pow(wind_s,2) * self.gas_t/4/self.gas_d) )
         conc_com_1 = source_q/(4 * math.pi * self.gas_d * dist) 
-        conc_com_2 = np.exp( -y_n * self.wind_s/(2*self.gas_d) - dist/lambda_plume)
+        conc_com_2 = np.exp( -y_n * wind_s/(2*self.gas_d) - dist/lambda_plume)
         conc = conc_com_1 * conc_com_2
         return conc
         
@@ -45,7 +47,7 @@ class ParticleFilter:
         self.wind_d = wind_d
         self.wind_s = wind_s
 
-        pf_conc = self._pf_gas_conc(pf_x, pf_y, pf_q)
+        pf_conc = self._pf_gas_conc(agent_x, agent_y, pf_x, pf_y, pf_q, wind_d, wind_s)
         mean_conc = (pf_conc + self.gas_measure)/2
         pdetSig = np.sqrt( pow((mean_conc*self.sensor_sig_m),2) + pow(self.env_sig,2) )
         #if pdetSig < 1e-100: pdetSig = 1e-100
@@ -89,9 +91,9 @@ class ParticleFilter:
                 CovXyp = np.var(self.pf_y)
                 CovXqp = np.var(self.pf_q)
 
-                dkXxp = math.sqrt(CovXxp)+0.5
-                dkXyp = math.sqrt(CovXyp)+0.5
-                dkXqp = math.sqrt(CovXqp)+0.5
+                dkXxp = math.sqrt(CovXxp)
+                dkXyp = math.sqrt(CovXyp)
+                dkXqp = math.sqrt(CovXqp)
 
                 nXxp = self.pf_x + (hopt*dkXxp*np.random.normal(0,1,self.pf_num) )
                 nXxp[nXxp>self.court_lx] = self.court_lx # out of area
@@ -121,13 +123,16 @@ class ParticleFilter:
         resample_true = False
 
         self.wind_d = wind_d
+
+        #print("PF_wind_d: ", wind_d)
         self.wind_s = wind_s
         self.agent_x = agent_x
         self.agent_y = agent_y
         self.gas_measure = measure
 
-        pf_conc = self._pf_gas_conc(pf_x, pf_y, pf_q)
+        pf_conc = self._pf_gas_conc(agent_x, agent_y, pf_x, pf_y, pf_q, wind_d, wind_s)
         mean_conc = (pf_conc + self.gas_measure)/2
+
         pdetSig = np.sqrt( pow((mean_conc*self.sensor_sig_m),2) + pow(self.env_sig,2) )
         #if pdetSig < 1e-100: pdetSig = 1e-100
         pdetSig[pdetSig < 1e-100] = 1e-100

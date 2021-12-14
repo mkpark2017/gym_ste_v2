@@ -19,10 +19,10 @@ class StePFilterBaseEnv(SteBaseEnv):
 
         self.agent_dist = self.agent_v * self.delta_t
 
-        self.last_measure = 0
-        self.court_lx = 60              # the size of the environment
-        self.court_ly = 60              # the size of the environment
-        self.max_step = 1000
+        #self.last_measure = 0
+        #self.court_lx = 60              # the size of the environment
+        #self.court_ly = 60              # the size of the environment
+        #self.max_step = 1000
 
         self.pf_num = 1000 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
@@ -53,12 +53,12 @@ class StePFilterBaseEnv(SteBaseEnv):
         self.Wpnorms = self.Wps
 
         self.eps = 0.05*self.court_lx
-        self.conc_eps = 0.2 # minimum conc
-        self.last_highest_conc = self.conc_eps
+        #self.conc_eps = 0.2 # minimum conc
+        self.last_highest_conc = 0
         self.normalization = True
 
-        self.env_sig = 0.25 #0.05
-        self.sensor_sig_m = 0.1 #0.02;
+        #self.env_sig = 0.25 #0.05
+        #self.sensor_sig_m = 0.1 #0.02;
 
         self.screen_width = 300
         self.screen_height = 300
@@ -85,7 +85,7 @@ class StePFilterBaseEnv(SteBaseEnv):
 #        wind_y = math.sin(self.wind_d + math.pi/2)*self.wind_s
         moved_dist = math.sqrt(pow(self.last_x - self.agent_x,2) + pow(self.last_y - self.agent_y,2))
 #        print("------------------------------------------------------")
-        self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
+        self.gas_measure = self._gas_measure()
         self.pf_x, self.pf_y, self.pf_q, self.Wpnorms = self.particle_filter._weight_update(self.gas_measure, self.agent_x, self.agent_y,
                                                                                             self.pf_x, self.pf_y, self.pf_q, self.Wpnorms,
                                                                                             self.wind_d, self.wind_s)
@@ -183,6 +183,10 @@ class StePFilterBaseEnv(SteBaseEnv):
 
         # track, where agent was
         self.positions.append([self.agent_x, self.agent_y])
+        self.measures.append(self.gas_measure)
+        self.agent_xs.append(self.agent_x)
+        self.agent_ys.append(self.agent_y)
+
         self.last_x = self.agent_x
         self.last_y = self.agent_y
 
@@ -204,6 +208,9 @@ class StePFilterBaseEnv(SteBaseEnv):
     def reset(self):
         self.count_actions = 0
         self.positions = []
+        self.measures = []
+        self.agent_xs = []
+        self.agent_ys = []
         # set initial state randomly
         self._set_init_state()
 
@@ -211,7 +218,7 @@ class StePFilterBaseEnv(SteBaseEnv):
         self.last_y = self.agent_y
 
         self.dur_t = 0
-        self.last_highest_conc = self.conc_eps
+        self.last_highest_conc = 0
 
 
         self.particle_filter = ParticleFilter(self)
@@ -226,7 +233,8 @@ class StePFilterBaseEnv(SteBaseEnv):
         self.cov_val = np.sqrt(pow(self.CovXxp,2) + pow(self.CovXyp,2))
         self.cov_last_highest = self.cov_val
 
-        if math.sqrt(pow(self.goal_y - self.agent_y,2) + pow(self.goal_x == self.agent_x,2) ) < self.court_lx*0.3:
+        if math.sqrt(pow(self.goal_y - self.agent_y,2) + pow(self.goal_x - self.agent_x,2) ) < self.court_lx*0.3:
+            print("Reset")
             self.reset()
         self.positions.append([self.agent_x, self.agent_y])
         if self.debug:
@@ -248,6 +256,12 @@ class StePFilterBaseEnv(SteBaseEnv):
             from gym.envs.classic_control import rendering
             if self.viewer is None:
                 self.viewer = rendering.Viewer(self.screen_width, self.screen_height)
+
+#            measure = rendering.make_circle(self.gas_measure)
+#            measure.add_attr(self.agent_trans)
+#            measure.set_color(255, 0, 0)
+#            self.viewer.add_geom(measure)
+
             #track the way, the agent has gone
             self.track_way = rendering.make_polyline(np.dot(self.positions, self.scale))
             self.track_way.set_linewidth(4)
@@ -264,8 +278,18 @@ class StePFilterBaseEnv(SteBaseEnv):
 
             goal = rendering.make_circle(5)
             goal.add_attr(rendering.Transform(translation=(self.goal_x*self.scale, self.goal_y*self.scale)))
-            goal.set_color(255, 0, 0)
+            goal.set_color(0, 0, 0)
             self.viewer.add_onetime(goal)
+
+#            print(self.measures)
+            for i in range(len(self.measures)):
+                measure = rendering.make_circle(math.pow(self.measures[i],1/3)*3)
+                measure.add_attr(rendering.Transform(translation=(self.agent_xs[i]*self.scale, self.agent_ys[i]*self.scale)))
+#                measure.add_attr(self.agent_trans)
+                measure.set_color(255, 0, 0)
+#                self.viewer.add_geom(measure)
+                self.viewer.add_onetime(measure)
+
 
             for i in range(0,self.pf_num):
                 particle = rendering.make_circle(3)

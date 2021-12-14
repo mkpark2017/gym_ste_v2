@@ -43,15 +43,15 @@ class SteBaseEnv(BasicSteEnv):
         self.observation_space = spaces.Box(self.obs_low_state, self.obs_high_state, dtype=np.float32)
 
         self.eps = 0.05*self.court_lx
-        self.conc_eps = 0.2 # minimum conc
-        self.last_highest_conc = self.conc_eps
+        #self.conc_eps = 0.2 # minimum conc
+        self.last_highest_conc = 0
         self.normalization = True
 
-        self.env_sig = 0.1 #0.05
-        self.sensor_sig_m = 0.05 #0.02;
+        self.env_sig = 0.4 #0.2 #0.4 #0.05
+        self.sensor_sig_m = 0.2 #0.1 #0.2 #0.02;
 
-        self.screen_width = 300
-        self.screen_height = 300
+        self.screen_width = 1000
+        self.screen_height = 1000
         self.scale = self.screen_width/self.court_lx
 
         self.total_time = 0.
@@ -65,36 +65,60 @@ class SteBaseEnv(BasicSteEnv):
         wind_speed_fluc = 0.1
         wind_dir = self.np_random.uniform(low=(self.wind_mean_phi-wind_degree_fluc)*math.pi/180, 
                                          high=(self.wind_mean_phi+wind_degree_fluc)*math.pi/180)
+        # wind_dir [radian]
         wind_speed = self.np_random.uniform(low=self.wind_mean_speed-wind_speed_fluc, 
                                             high=self.wind_mean_speed+wind_speed_fluc)
         return wind_dir, wind_speed
 
 
-    def _boundary_warning_sensor(self):
-        dist_x = self.court_lx - self.agent_x
+#    def _boundary_warning_sensor(self):
+#        dist_x = self.court_lx - self.agent_x
 #        if dist_x == 0: dist_x = 1e-2
-        dist_y = self.court_ly - self.agent_y
+#        dist_y = self.court_ly - self.agent_y
 #        if dist_y == 0: dist_y = 1e-2
-        x_warning = 0
-        y_warning = 0
-        if dist_x < self.agent_dist*0.99:
-            x_warning = 1
-            self.warning = True
-        if dist_y < self.agent_dist*0.99:
-            y_warning = 1
-            self.warning = True
-        dist_x = 0 - self.agent_x
+#        x_warning = 0
+#        y_warning = 0
+#        if dist_x < self.agent_dist*0.99:
+#            x_warning = 1
+#            self.warning = True
+#        if dist_y < self.agent_dist*0.99:
+#            y_warning = 1
+#            self.warning = True
+#        dist_x = 0 - self.agent_x
 #        if dist_x == 0: dist_x = -1e-2
-        dist_y = 0 - self.agent_y
+#        dist_y = 0 - self.agent_y
 #        if dist_y == 0: dist_y = -1e-2
-        if abs(dist_x) < self.agent_dist*0.99:
-            x_warning = -1
-            self.warning = True
-        if abs(dist_y) < self.agent_dist*0.99:
-            y_warning = -1
-            self.warning = True
+#        if abs(dist_x) < self.agent_dist*0.99:
+#            x_warning = -1
+#            self.warning = True
+#        if abs(dist_y) < self.agent_dist*0.99:
+#            y_warning = -1
+#            self.warning = True
         
-        return x_warning, y_warning
+#        return x_warning, y_warning
+
+#    def _gas_conc(self, pos_x, pos_y): # true gas conectration
+#        if self.goal_x == pos_x and self.goal_y == pos_y: # to avoid divide by 0
+#            pos_x += 1e-10
+#            pos_y += 1e-10
+#        dist = self._distance(pos_x, pos_y)
+#        #print("true wind_d: ", self.wind_mean_phi*math.pi/180)
+#        y_n = -(pos_x - self.goal_x)*math.sin(self.wind_mean_phi*math.pi/180)+ \
+#                   (pos_y - self.goal_y)*math.cos(self.wind_mean_phi*math.pi/180)
+#        lambda_plume = math.sqrt(self.gas_d * self.gas_t / (1 + pow(self.wind_mean_speed,2) * self.gas_t/4/self.gas_d) )
+#        conc = self.gas_q/(4 * math.pi * self.gas_d * dist) * np.exp(-y_n * self.wind_mean_speed/(2*self.gas_d) - dist/lambda_plume)
+#        return conc
+
+#    def _gas_measure(self):
+#        conc = self._gas_conc(self.agent_x, self.agent_y)
+#        conc_env = self.np_random.normal(conc,self.env_sig)
+#        #print(self.sensor_sig_m)
+#        while conc_env < 0:
+#            conc_env = self.np_random.normal(conc,self.env_sig)
+#        gas_measure = self.np_random.normal(conc_env, conc_env*self.sensor_sig_m)
+#        while gas_measure < 0:
+#            gas_measure = self.np_random.normal(conc_env, conc_env*self.sensor_sig_m)
+#        return gas_measure
 
     def _observation(self):
         self.wind_d, self.wind_s = self._wind_sensor() # wind direction & speed
@@ -102,37 +126,22 @@ class SteBaseEnv(BasicSteEnv):
 #        wind_y = math.sin(self.wind_d + math.pi/2)*self.wind_s
         moved_dist = math.sqrt(pow(self.last_x - self.agent_x,2) + pow(self.last_y - self.agent_y,2))
 #        print("------------------------------------------------------")
-        self.gas_measure = self._gas_measure(self.agent_x, self.agent_y)
+        self.gas_measure = self._gas_measure()
 #        self._particle_filter()
         x_warning, y_warning = self._boundary_warning_sensor()
 #        print("x", x_warning)
 #        print("y", y_warning)
-#        etc_state = np.array([float(wind_x), float(wind_y), float(self.last_x), float(self.last_y), float(self.dur_t), float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
-#        etc_state = np.array([float(self.wind_d/math.pi), float(self.wind_s), x_warning, y_warning, float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
-#        etc_state = np.array([float(self.wind_d/math.pi), float(self.wind_s), float(moved_dist), float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
 #        etc_state = np.array([float(self.wind_d/math.pi), float(self.wind_s), float(self.dur_t), float(x_warning), float(y_warning), float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
         etc_state = np.array([float(self.wind_d/math.pi), float(self.wind_s), float(self.dur_t), float(self.agent_x), float(self.agent_y), float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
 
         return etc_state
 #        return np.concatenate((etc_state, self.pf_x-self.agent_x, self.pf_y-self.agent_y, self.Wpnorms), axis=None)
 
-
     def _normalize_observation(self, obs):
         normalized_obs = []
         for i in range(0, obs.size):
             normalized_obs.append((obs[i]-self.obs_low_state[i])/(self.obs_high_state[i] - self.obs_low_state[i]))
         return np.array(normalized_obs)
-
-    def _gas_measure(self, pos_x, pos_y):
-        conc = self._gas_conc(self.agent_x, self.agent_y)
-        conc_env = self.np_random.normal(conc,self.env_sig)
-        while conc_env < 0:
-            conc_env = self.np_random.normal(conc,self.env_sig)
-        gas_measure = self.np_random.normal(conc_env, conc_env*self.sensor_sig_m)
-        while gas_measure < 0:
-            gas_measure = self.np_random.normal(conc_env, conc_env*self.sensor_sig_m)
-
-        return gas_measure
 
     def _reward_goal_reached(self):
         return 1000 #100
@@ -243,7 +252,7 @@ class SteBaseEnv(BasicSteEnv):
         self.last_y = self.agent_y
 
         self.dur_t = 0
-        self.last_highest_conc = self.conc_eps
+        self.last_highest_conc = 0
 
 #        self.pf_x = self.np_random.uniform(low=self.pf_low_state_x, high=self.pf_high_state_x)
 #        self.pf_y = self.np_random.uniform(low=self.pf_low_state_y, high=self.pf_high_state_y)

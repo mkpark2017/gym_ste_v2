@@ -12,7 +12,7 @@ import ray
 #import gym_ste.envs
 
 DEBUG = True
-env = gym.make('gym_ste:SteEstHardEnv-v0')
+env = gym.make('gym_ste:StePFilterVelConvCenterExtremeEnv-v0')
 
 for e in range(300):
     obs = env.reset()
