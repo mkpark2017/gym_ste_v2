@@ -50,7 +50,7 @@ class BasicSteEnv(gym.Env):
         self.max_step = 300
 
         self.delta_t = 1		# 1sec
-        self.agent_v = 2		# 2m/s
+        self.agent_v = 6		# 2m/s
         self.agent_dist = self.agent_v * self.delta_t
 
 
@@ -82,7 +82,7 @@ class BasicSteEnv(gym.Env):
         self.action_space = spaces.Box(np.array([self.action_angle_low]), np.array([self.action_angle_high]), dtype=np.float32)
 
         self.count_actions = 0  # count actions for rewarding
-        self.eps = 3.0  # distance to goal, that has to be reached to solve env
+        self.eps = 1.0  # distance to goal, that has to be reached to solve env
         self.conv_eps = 1.0 # particle filter converge
         self.conc_eps = 0.2;
         self.np_random = None  # random generator
@@ -107,8 +107,8 @@ class BasicSteEnv(gym.Env):
         self.true_conc = np.zeros((self.court_lx, self.court_ly))
 
 
-        self.env_sig = 0.25 #0.4
-        self.sensor_sig_m = 0.1 #0.2
+        self.env_sig = 0.4 #0.4
+        self.sensor_sig_m = 0.2 #0.2
 
         self.gmm_num = 0
 

@@ -25,7 +25,7 @@ class StePFilterBaseEnv(SteBaseEnv):
         #self.court_ly = 60              # the size of the environment
         #self.max_step = 1000
 
-        self.pf_num = 100 #150??
+        self.pf_num = 1000 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         pf_low_state_wp = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)

@@ -88,7 +88,7 @@ class BaseEnv(StePFilterBaseEnv):
 
         # done for step rewarding
         self.cov_val = np.sqrt(self.CovXxp + self.CovXyp)
-        converge_done = bool(self.cov_val < 1)
+        converge_done = bool(self.cov_val < self.conv_eps)
         #done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
 
         rew = 0
@@ -101,7 +101,7 @@ class BaseEnv(StePFilterBaseEnv):
             rew += 0
 #            rew += self._step_reward()
         else: # particle filter is converged
-            nearby_bool = bool(nearby<1)
+            nearby_bool = bool(nearby<self.eps)
             if nearby_bool:
                 rew = self._reward_goal_reached()
 
