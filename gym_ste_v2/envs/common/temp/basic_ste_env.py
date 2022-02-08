@@ -50,7 +50,7 @@ class BasicSteEnv(gym.Env):
         self.max_step = 300
 
         self.delta_t = 1		# 1sec
-        self.agent_v = 6		# 2m/s
+        self.agent_v = 2		# 2m/s
         self.agent_dist = self.agent_v * self.delta_t
 
 
