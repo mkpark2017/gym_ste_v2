@@ -150,7 +150,7 @@ class StePFilterBaseEnv(gym.Env):
         self.est_location = None
 
         # set a seed and reset the environment
-        self.seed()
+#        self.seed()
 #        self.reset()
 
     def _distance(self, pose_x, pose_y):
