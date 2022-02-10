@@ -56,7 +56,9 @@ class BaseEnv(StePFilterBaseEnv):
 
         #self.conv_eps = 1
         # set a seed and reset the environment
-        self.seed()
+        seed = self.seed(8201076236150)
+        print("Seed: ", seed)
+
 #        self.reset()
 
     def _observation(self):

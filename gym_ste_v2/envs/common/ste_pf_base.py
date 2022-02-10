@@ -430,7 +430,11 @@ class StePFilterBaseEnv(gym.Env):
                         color = cm.jet(255) # 255 is maximum number
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
                     elif conc > self.conc_eps: #just for plot (_gas_conc already includes conc_eps)
-                        color = cm.jet(round(math.log(conc+1)/math.log(max_conc+1)*255))
+                        color_cal = round( (math.exp(math.log(conc+1)/math.log(max_conc+1))-1) * 255)
+#                        color_cal = conc/max_conc * 255
+                        if color_cal < 0: color_cal = 0
+                        color = cm.jet(color_cal)
+#                        color = cm.jet(round((conc+1)/(max_conc+1)*255) )
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
 #                    conc_mat_temp.append(round(conc,2))
 #                conc_mat.append(conc_mat_temp)
