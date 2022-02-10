@@ -37,7 +37,7 @@ class BaseEnv(StePFilterBaseEnv):
 
 #        self.conv_eps = 1
         # set a seed and reset the environment
-        seed = self.seed(8201085478471)
+        seed = self.seed(8201076236150)
         print("Seed: ", seed)
 #        self.reset()
 
@@ -67,6 +67,11 @@ class BaseEnv(StePFilterBaseEnv):
                         float(mean_x), float(mean_y), float(self.CovXxp), float(self.CovXyp)])
 
         return obs
+
+    def _info_function(self, obs, action, done, rew):
+        mean_q = np.sum(self.pf_q * self.Wpnorms)
+
+        return np.array([mean_q, self.gas_q])
 
     def step(self, action):
         #print(self.env_sig)

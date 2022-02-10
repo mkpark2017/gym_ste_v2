@@ -17,6 +17,7 @@ class StePfConvCentExtMatEnv(BaseEnv):
     def __init__(self):
         BaseEnv.__init__(self)
 
+
         mat_file = scipy.io.loadmat('/root/gym_ste_v2/gym_ste_v2/envs/common/mat_files/random_states_rate.mat')
         self.agent_x_list = mat_file['agent_x_rate']*self.court_lx
         self.agent_y_list = mat_file['agent_y_rate']*self.court_ly

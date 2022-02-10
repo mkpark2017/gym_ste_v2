@@ -59,8 +59,8 @@ class StePFilterBaseEnv(gym.Env):
         self.gmm_num = 0
 
         # gas sensing
-        self.env_sig = 0.2 #0.4
-        self.sensor_sig_m = 0.1 #0.2
+        self.env_sig = 0.4 #0.4
+        self.sensor_sig_m = 0.2 #0.2
         self.conc_eps = 0.2 # minimum conc
         self.conc_max = 100
 
@@ -107,7 +107,7 @@ class StePFilterBaseEnv(gym.Env):
         self.max_q = 5000
 
         #-------------------------Particle filter-------------------
-        self.pf_num = 200 #150??
+        self.pf_num = 1000 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         pf_low_state_wp = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -131,15 +131,15 @@ class StePFilterBaseEnv(gym.Env):
 
         #---------------------------Action--------------------------
         self.delta_t = 1                # 1sec
-        self.agent_v = 4                # 2m/s
+        self.agent_v = 6                # 2m/s
         self.agent_dist = self.agent_v * self.delta_t
         self.action_angle_low = -1
         self.action_angle_high = 1
         self.action_space = spaces.Box(np.array([self.action_angle_low]), np.array([self.action_angle_high]), dtype=np.float32)
 
         #--------------------------Ending Criteria--------------------------------
-        self.conv_eps = 2.0
-        self.eps = 8.0
+        self.conv_eps = 1.0
+        self.eps = 1.0
         self.conc_eps = 0.2 # minimum conc
 
 
@@ -280,7 +280,11 @@ class StePFilterBaseEnv(gym.Env):
         self.wind_mean_speed = 2
 
     def _info_function(self, obs, action, done, rew):
-        '''
+        mean_q = np.sum(self.pf_q * self.Wpnorms)
+
+        return np.array([mean_q, self.gas_q])
+    '''
+    def _info_function(self, obs, action, done, rew):
         if self.normalization:
            obs = obs*(self.obs_low_state - self.obs_high_state) + self.obs_low_state
            info = "time step:" + str(self.count_actions) + ", act:" + str(
@@ -301,9 +305,10 @@ class StePFilterBaseEnv(gym.Env):
                    round(float(obs[5]),2)) + ", last conc" + str(round(obs[6],2)) + ", conc" + str(round(obs[7],2)) + ", last highest conc" + str(
                    round(obs[8],2)) + ", rew:" + str(rew) + ", current pos: (" + str(round(self.agent_x,2)) + "," + str(
                    round(self.agent_y,2)) + ")", "goal pos: (" + str(self.goal_x) + "," + str(self.goal_y) + "), done: " + str(done)
-        '''
         info = "Not show data"
+
         return info
+    '''
 
     def step(self, action):
         self.outborder = False

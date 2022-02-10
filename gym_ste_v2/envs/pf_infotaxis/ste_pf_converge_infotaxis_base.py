@@ -43,6 +43,10 @@ class BaseEnv(StePFilterBaseEnv):
 
         self.normalization = False
 
+        seed = self.seed(8201076236150)
+        print("Seed: ", seed)
+
+
 
     def _observation(self):
         self.wind_d, self.wind_s = self._wind_sensor() # wind direction & speed
