@@ -43,9 +43,6 @@ class BaseEnv(StePFilterBaseEnv):
 
         self.normalization = False
 
-        seed = self.seed(8201076236150)
-        print("Seed: ", seed)
-
 
 
     def _observation(self):
