@@ -56,7 +56,7 @@ class BaseEnv(StePFilterBaseEnv):
 
         #self.conv_eps = 1
         # set a seed and reset the environment
-        seed = self.seed(8201076236150)
+        seed = self.seed(8201085478471)
         print("Seed: ", seed)
 
 #        self.reset()
