@@ -59,8 +59,8 @@ class StePFilterBaseEnv(gym.Env):
         self.gmm_num = 0
 
         # gas sensing
-        self.env_sig = 0.4 #0.4
-        self.sensor_sig_m = 0.2 #0.2
+        self.env_sig = 0.2 #0.4
+        self.sensor_sig_m = 0.1 #0.2
         self.conc_eps = 0.2 # minimum conc
         self.conc_max = 100
 
@@ -108,7 +108,7 @@ class StePFilterBaseEnv(gym.Env):
         self.max_q = 5000
 
         #-------------------------Particle filter-------------------
-        self.pf_num = 1000 #150??
+        self.pf_num = 200 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         pf_low_state_wp = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -135,7 +135,7 @@ class StePFilterBaseEnv(gym.Env):
 
         #---------------------------Action--------------------------
         self.delta_t = 1                # 1sec
-        self.agent_v = 6                # 2m/s
+        self.agent_v = 2                # 2m/s
         self.agent_dist = self.agent_v * self.delta_t
         self.action_angle_low = -1
         self.action_angle_high = 1
@@ -143,7 +143,7 @@ class StePFilterBaseEnv(gym.Env):
 
         #--------------------------Ending Criteria--------------------------------
         self.conv_eps = 1.0
-        self.eps = 1.0
+        self.eps = 4.0
         self.conc_eps = 0.2 # minimum conc
 
 
@@ -280,8 +280,10 @@ class StePFilterBaseEnv(gym.Env):
 
     def _info_function(self, obs, action, done, rew):
         mean_q = np.sum(self.pf_q * self.Wpnorms)
-
-        return np.array([mean_q, self.gas_q])
+        dist_s_p = self._distance(self.agent_x, self.agent_y)
+        info = [mean_q, self.gas_q]
+        return info
+        #return [0, 1]
     '''
     def _info_function(self, obs, action, done, rew):
         if self.normalization:

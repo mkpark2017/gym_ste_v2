@@ -92,8 +92,6 @@ class BaseEnv(StePFilterBaseEnv):
 
         pf_center = np.array([np.mean(self.pf_x), np.mean(self.pf_y)])
         nearby = math.sqrt( pow(pf_center[0]-self.goal_x,2) + pow(pf_center[1]-self.goal_y,2) )
-        nearby_bool = bool(nearby<self.eps)
-
         if not converge_done:
             rew += self._step_reward()
         else: # particle filter is converged
@@ -127,9 +125,7 @@ class BaseEnv(StePFilterBaseEnv):
            norm_obs = []
            norm_obs = self._normalize_observation(obs)
            info = self._info_function(norm_obs, action, done, rew)
-           info.append(nearby)
-           info.append(nearby_bool)
-           return norm_obs, rew, done, info
+           return norm_obs, rew, done, info.append(
         else:
            info = self._info_function(obs, action, done, rew)
-           return obs, rew, done, info
+           return obs, rew, don
