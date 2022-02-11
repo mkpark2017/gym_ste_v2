@@ -433,11 +433,7 @@ class StePFilterBaseEnv(gym.Env):
 #                        color_cal = conc/max_conc * 255
                         if color_cal < 0: color_cal = 0
                         color = cm.jet(color_cal)
-<<<<<<< HEAD
-
-=======
 #                        color = cm.jet(round((conc+1)/(max_conc+1)*255) )
->>>>>>> d5f5f4965054c0d491ef6a5b7208522f7816a91c
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
 #                    conc_mat_temp.append(round(conc,2))
 #                conc_mat.append(conc_mat_temp)
