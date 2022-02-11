@@ -37,8 +37,6 @@ class BaseEnv(StePFilterBaseEnv):
 
 #        self.conv_eps = 1
         # set a seed and reset the environment
-        seed = self.seed(8201076236150)
-        print("Seed: ", seed)
 #        self.reset()
 
     def _observation(self):
@@ -104,7 +102,7 @@ class BaseEnv(StePFilterBaseEnv):
             rew += self._step_reward()
         else: # particle filter is converged
             nearby_bool = bool(nearby<self.eps)
-            if nearby_bool and bool(abs(mean_q-self.gas_q) < self.gas_q*0.1):
+            if nearby_bool: #nearby_bool and bool(abs(mean_q-self.gas_q) < self.gas_q*0.1):
                 rew = self._reward_goal_reached()
 
         terminate_done = bool(self.count_actions >= self.max_step)
