@@ -104,7 +104,7 @@ class BaseEnv(StePFilterBaseEnv):
             rew += self._step_reward()
         else: # particle filter is converged
             nearby_bool = bool(nearby<self.eps)
-            if nearby_bool and bool(mean_q < self.gas_q*0.1):
+            if nearby_bool and bool(abs(mean_q-self.gas_q) < self.gas_q*0.1):
                 rew = self._reward_goal_reached()
 
         terminate_done = bool(self.count_actions >= self.max_step)

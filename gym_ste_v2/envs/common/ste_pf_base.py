@@ -59,8 +59,8 @@ class StePFilterBaseEnv(gym.Env):
         self.gmm_num = 0
 
         # gas sensing
-        self.env_sig = 0.2 #0.4
-        self.sensor_sig_m = 0.1 #0.2
+        self.env_sig = 0.4 #0.4
+        self.sensor_sig_m = 0.2 #0.2
         self.conc_eps = 0.2 # minimum conc
         self.conc_max = 100
 
@@ -71,6 +71,7 @@ class StePFilterBaseEnv(gym.Env):
         self.background_viewer = None       # viewer for background
         self.scale = self.screen_width/self.court_lx
         self.true_conc = np.zeros((self.court_lx, self.court_ly))
+
         #---------- ------Dummy Env (changed at each Env)-----------------------------
         self.gas_d = 10                 # diffusivity [10m^2/s]
         self.gas_t = 1000               # gas life time [1000sec]
@@ -107,7 +108,7 @@ class StePFilterBaseEnv(gym.Env):
         self.max_q = 5000
 
         #-------------------------Particle filter-------------------
-        self.pf_num = 200 #150??
+        self.pf_num = 1000 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         pf_low_state_wp = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -118,6 +119,9 @@ class StePFilterBaseEnv(gym.Env):
 
         self.Wps = np.ones(self.pf_num)/self.pf_num
         self.Wpnorms = self.Wps
+
+        self.pf_center = None
+        self.est_location = None
 
         #--------------------------Observation-----------------------
         self.normalization = True
@@ -131,27 +135,22 @@ class StePFilterBaseEnv(gym.Env):
 
         #---------------------------Action--------------------------
         self.delta_t = 1                # 1sec
-        self.agent_v = 4                # 2m/s
+        self.agent_v = 6                # 2m/s
         self.agent_dist = self.agent_v * self.delta_t
         self.action_angle_low = -1
         self.action_angle_high = 1
         self.action_space = spaces.Box(np.array([self.action_angle_low]), np.array([self.action_angle_high]), dtype=np.float32)
 
         #--------------------------Ending Criteria--------------------------------
-        self.conv_eps = 2.0
-        self.eps = 8.0
+        self.conv_eps = 1.0
+        self.eps = 1.0
         self.conc_eps = 0.2 # minimum conc
 
 
+        seed = self.seed(8201076236150)
+        print("Seed: ", seed)
         self.particle_filter = ParticleFilter(self)
 
-
-        self.pf_center = None
-        self.est_location = None
-
-        # set a seed and reset the environment
-#        self.seed()
-#        self.reset()
 
     def _distance(self, pose_x, pose_y):
         return math.sqrt(pow((self.goal_x - pose_x), 2) + pow(self.goal_y - pose_y, 2))
@@ -430,7 +429,11 @@ class StePFilterBaseEnv(gym.Env):
                         color = cm.jet(255) # 255 is maximum number
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
                     elif conc > self.conc_eps: #just for plot (_gas_conc already includes conc_eps)
-                        color = cm.jet(round(math.log(conc+1)/math.log(max_conc+1)*255))
+                        color_cal = round( (math.exp(math.log(conc+1)/math.log(max_conc+1))-1) * 255)
+#                        color_cal = conc/max_conc * 255
+                        if color_cal < 0: color_cal = 0
+                        color = cm.jet(color_cal)
+
                         self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
 #                    conc_mat_temp.append(round(conc,2))
 #                conc_mat.append(conc_mat_temp)

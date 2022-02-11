@@ -24,6 +24,8 @@ class ParticleFilter:
         self.pf_q = np.ones(self.pf_num)*np.nan
         self.Wpnorms = np.ones(self.pf_num)*np.nan
 
+        self.np_random = args.np_random
+
 
     def _pf_gas_conc(self, agent_x, agent_y, source_x, source_y, source_q, wind_d, wind_s): # true gas conectration
         avoid_zero = (np.sqrt(pow(source_x - agent_x,2) + pow(source_y - agent_y,2) ) < 1e-50) 
@@ -67,7 +69,7 @@ class ParticleFilter:
             indx = np.ones(N)*-1
             Q = np.cumsum(self.Wpnorms)
             indx = np.zeros(N)
-            T = np.arange(N)/N + np.random.uniform(0,1/N, N)
+            T = np.arange(N)/N + self.np_random.uniform(0,1/N, N)
             i=0
             j=0
             while(i<N and j<M):
@@ -95,20 +97,20 @@ class ParticleFilter:
                 dkXyp = math.sqrt(CovXyp)
                 dkXqp = math.sqrt(CovXqp)
 
-                nXxp = self.pf_x + (hopt*dkXxp*np.random.normal(0,1,self.pf_num) )
+                nXxp = self.pf_x + (hopt*dkXxp*self.np_random.normal(0,1,self.pf_num) )
                 nXxp[nXxp>self.court_lx] = self.court_lx # out of area
                 nXxp[nXxp<0] = 0 # out of area
 
-                nXyp = self.pf_y + (hopt*dkXyp*np.random.normal(0,1,self.pf_num) )
+                nXyp = self.pf_y + (hopt*dkXyp*self.np_random.normal(0,1,self.pf_num) )
                 nXyp[nXyp>self.court_ly] = self.court_ly # out of area
                 nXyp[nXyp<0] = 0 # out of area
 
-                nXqp = self.pf_q + (hopt*dkXqp*np.random.normal(0,1,self.pf_num) )
+                nXqp = self.pf_q + (hopt*dkXqp*self.np_random.normal(0,1,self.pf_num) )
                 nXqp[nXqp<0] = 0 # out of range
 
                 n_new = self._weight_calculate(self.gas_measure, self.agent_x, self.agent_y, nXxp, nXyp, nXqp, self.wind_d, self.wind_s)
                 alpha = n_new/gauss_new[indx]
-                mcrand = np.random.uniform(0,1,self.pf_num)
+                mcrand = self.np_random.uniform(0,1,self.pf_num)
 #                print(alpha > mcrand)
                 new_point_bool = alpha > mcrand
                 self.pf_x[new_point_bool] = nXxp[new_point_bool]
