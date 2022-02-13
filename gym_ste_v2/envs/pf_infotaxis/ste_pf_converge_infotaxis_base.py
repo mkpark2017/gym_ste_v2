@@ -88,7 +88,8 @@ class BaseEnv(StePFilterBaseEnv):
         #x_warning, y_warning = self._boundary_warning_sensor()
 
         # done for step rewarding
-        self.cov_val = np.sqrt(self.CovXxp + self.CovXyp)
+        self.cov_val = np.sqrt(self.CovXxp/pow(self.court_lx,2) + self.CovXyp/pow(self.court_ly,2) + self.CovXqp/pow(self.max_q,2) )
+#        print("cov: ", self.cov_val)
         converge_done = bool(self.cov_val < self.conv_eps)
         #done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
 

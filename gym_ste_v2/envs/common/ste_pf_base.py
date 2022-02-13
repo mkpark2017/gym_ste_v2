@@ -1,3 +1,4 @@
+
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
@@ -111,10 +112,12 @@ class StePFilterBaseEnv(gym.Env):
         self.pf_num = 200 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
-        pf_low_state_wp = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
+        self.pf_low_state_q = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
+        pf_low_state_wp = np.zeros(self.pf_num) # particle filter (w1,w2,w3, ...)
 
         self.pf_high_state_x = np.ones(self.pf_num)*self.court_lx
         self.pf_high_state_y = np.ones(self.pf_num)*self.court_ly
+        self.pf_high_state_q = np.ones(self.pf_num)*self.max_q
         pf_high_state_wp = np.ones(self.pf_num)
 
         self.Wps = np.ones(self.pf_num)/self.pf_num
@@ -129,26 +132,26 @@ class StePFilterBaseEnv(gym.Env):
         etc_low_state = np.array([-1, 0, 0, 0, 0, -1, 0, 0, 0]) # [wind_direction, wind speed (m/s), duration time, current pos (x,y), last action (direction), last concentration, concentration, highest conc
         etc_high_state = np.array([1, 20,  self.max_step, self.court_lx, self.court_ly, 1, self.conc_max, self.conc_max, self.conc_max])
 
-        self.obs_low_state = np.concatenate((etc_low_state, self.pf_low_state_x, self.pf_low_state_y, pf_low_state_wp), axis=None)
-        self.obs_high_state = np.concatenate((etc_high_state, self.pf_high_state_x, self.pf_high_state_y, pf_high_state_wp), axis=None)
+        self.obs_low_state = np.concatenate((etc_low_state, self.pf_low_state_x, self.pf_low_state_y, self.pf_low_state_q, pf_low_state_wp), axis=None)
+        self.obs_high_state = np.concatenate((etc_high_state, self.pf_high_state_x, self.pf_high_state_y, self.pf_high_state_q, pf_high_state_wp), axis=None)
         self.observation_space = spaces.Box(self.obs_low_state, self.obs_high_state, dtype=np.float32)
 
         #---------------------------Action--------------------------
         self.delta_t = 1                # 1sec
-        self.agent_v = 2                # 2m/s
+        self.agent_v = 4                # 2m/s
         self.agent_dist = self.agent_v * self.delta_t
         self.action_angle_low = -1
         self.action_angle_high = 1
         self.action_space = spaces.Box(np.array([self.action_angle_low]), np.array([self.action_angle_high]), dtype=np.float32)
 
         #--------------------------Ending Criteria--------------------------------
-        self.conv_eps = 1.0
-        self.eps = 4.0
+        self.conv_eps = 0.05
+        self.eps = 8.0
         self.conc_eps = 0.2 # minimum conc
 
 
-        seed = self.seed(8201076236150)
-        print("Seed: ", seed)
+        self.seed_num = self.seed(8201065596150)
+        print("Seed: ", self.seed_num)
         self.particle_filter = ParticleFilter(self)
 
 
@@ -214,7 +217,7 @@ class StePFilterBaseEnv(gym.Env):
                               float(self.last_action), float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc)])
 
 
-        return np.concatenate((etc_state, self.pf_x, self.pf_y, self.Wpnorms), axis=None)
+        return np.concatenate((etc_state, self.pf_x, self.pf_y, self.pf_q, self.Wpnorms), axis=None)
 
     def _normalize_observation(self, obs):
         normalized_obs = []
@@ -378,12 +381,13 @@ class StePFilterBaseEnv(gym.Env):
         self.particle_filter = ParticleFilter(self)
         self.pf_x = self.np_random.uniform(low=self.pf_low_state_x, high=self.pf_high_state_x)
         self.pf_y = self.np_random.uniform(low=self.pf_low_state_y, high=self.pf_high_state_y)
-        self.pf_q = self.np_random.uniform(low=np.zeros(self.Wpnorms.size), high=np.ones(self.Wpnorms.size)*self.max_q)
+        self.pf_q = self.np_random.uniform(low=self.pf_low_state_q, high=self.pf_high_state_q)
         self.Wps = np.ones(self.pf_num)/self.pf_num
         self.Wpnorms = self.Wps
 
         self.CovXxp = np.var(self.pf_x)
         self.CovXyp = np.var(self.pf_y)
+        self.CovXqp = np.var(self.pf_q)
         self.cov_val = np.sqrt(pow(self.CovXxp,2) + pow(self.CovXyp,2))
         self.cov_last_highest = self.cov_val
 

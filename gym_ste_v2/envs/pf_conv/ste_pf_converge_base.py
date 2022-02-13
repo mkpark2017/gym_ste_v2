@@ -20,53 +20,11 @@ class BaseEnv(StePFilterBaseEnv):
         #self.agent_v = 6                # 2m/s
         #self.agent_dist = self.agent_v * self.delta_t
 
-        self.obs_low_state = np.array([-1, 0,        # wind_direction, wind speed (m/s)
-                                        0,           # duration time
-                                        0, 0,        # current position
-                                       -1,           # last action
-                                        0, 0, 0,     # last conc, current conc highest conc
-                                        0, 0, 0, 0]) # mean_x, mean_y, cov_x, cov_y
-        self.obs_high_state = np.array([1, 20,
-                                        self.max_step,
-                                        self.court_lx, self.court_ly,
-                                        1,
-                                        self.conc_max, self.conc_max, self.conc_max,
-                                        self.court_lx, self.court_ly, pow(self.court_lx,2), pow(self.court_ly,2)])
-        
-        self.observation_space = spaces.Box(self.obs_low_state, self.obs_high_state, dtype=np.float32)
-
 #        self.conv_eps = 1
         # set a seed and reset the environment
 #        seed = self.seed(8201076236150)
 #        print("Seed: ", seed)
 #        self.reset()
-
-    def _observation(self):
-        self.wind_d, self.wind_s = self._wind_sensor() # wind direction & speed
-        moved_dist = math.sqrt(pow(self.last_x - self.agent_x,2) + pow(self.last_y - self.agent_y,2))
-#        print("------------------------------------------------------")
-        self.gas_measure = self._gas_measure()
-#        self._particle_filter()
-        self.pf_x, self.pf_y, self.pf_q, self.Wpnorms = self.particle_filter._weight_update(self.gas_measure, self.agent_x, self.agent_y,
-                                                                                            self.pf_x, self.pf_y, self.pf_q, self.Wpnorms,
-                                                                                            self.wind_d, self.wind_s)
-
-        self.CovXxp = np.var(self.pf_x)
-        self.CovXyp = np.var(self.pf_y)
-        self.CovXqp = np.var(self.pf_q)
-
-#        x_warning, y_warning = self._boundary_warning_sensor()
-        mean_x = sum(self.pf_x * self.Wpnorms)
-        mean_y = sum(self.pf_y * self.Wpnorms)
-
-        obs = np.array([float(self.wind_d/math.pi), float(self.wind_s),
-                        float(self.dur_t),
-                        float(self.agent_x), float(self.agent_y),
-                        float(self.last_action),
-                        float(self.last_measure), float(self.gas_measure), float(self.last_highest_conc),
-                        float(mean_x), float(mean_y), float(self.CovXxp), float(self.CovXyp)])
-
-        return obs
 
     def step(self, action):
         #print(self.env_sig)

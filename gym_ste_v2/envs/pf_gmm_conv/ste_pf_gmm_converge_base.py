@@ -136,7 +136,9 @@ class BaseEnv(StePFilterBaseEnv):
 
         # done for step rewarding
         agent_dist = self.agent_v*self.delta_t
-        self.cov_val = np.sqrt(self.CovXxp + self.CovXyp)
+#        self.cov_val = np.sqrt(self.CovXxp/self.court_lx + self.CovXyp/self.court_ly + self.CovXqp/self.max_q)
+        self.cov_val = np.sqrt(self.CovXxp/pow(self.court_lx,2) + self.CovXyp/pow(self.court_ly,2) + self.CovXqp/pow(self.max_q,2) )
+
         converge_done = bool(self.cov_val < self.conv_eps)
         #done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
 
