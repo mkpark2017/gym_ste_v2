@@ -150,7 +150,7 @@ class StePFilterBaseEnv(gym.Env):
         self.conc_eps = 0.2 # minimum conc
 
 
-        self.seed_num = self.seed(8201065596150)
+        self.seed_num = self.seed(8201033333333)
         print("Seed: ", self.seed_num)
         self.particle_filter = ParticleFilter(self)
 
