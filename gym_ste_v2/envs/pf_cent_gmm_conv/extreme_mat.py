@@ -3,20 +3,19 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
 import math
-from gym_ste_v2.envs.pf_conv_cent_q.ste_pf_converge_center_q_base import *
+from gym_ste_v2.envs.pf_cent_gmm_conv.base import *
 from gym.envs.registration import register
 
 from datetime import datetime
 import scipy.io
 
 
-class StePfConvCentQExtMatEnv(BaseEnv):
+class StePfCentGmmConvExtMatEnv(BaseEnv):
     metadata = {'render.modes': ['human', 'ansi'],
                 'video.frames_per_second': 30}
 
     def __init__(self):
         BaseEnv.__init__(self)
-
 
         mat_file = scipy.io.loadmat('/root/gym_ste_v2/gym_ste_v2/envs/common/mat_files/random_states_rate.mat')
         self.agent_x_list = mat_file['agent_x_rate']*self.court_lx
@@ -52,7 +51,7 @@ class StePfConvCentQExtMatEnv(BaseEnv):
         self.env_list += 1
 
 register(
-    id='StePfConvCentQExtMatEnv-v0',
-    entry_point='gym_ste_v2.envs.pf_conv_cent_q:StePfConvCentQExtMatEnv',
+    id='StePfCentGmmConvExtMatEnv-v0',
+    entry_point='gym_ste_v2.envs.pf_cent_gmm_conv:StePfCentGmmConvExtMatEnv',
 )
 

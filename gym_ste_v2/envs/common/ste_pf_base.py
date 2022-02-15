@@ -66,8 +66,8 @@ class StePFilterBaseEnv(gym.Env):
         self.conc_max = 100
 
         # rendering
-        self.screen_height = 600
-        self.screen_width = 600
+        self.screen_height = 200
+        self.screen_width = 200
         self.viewer = None                  # viewer for render()
         self.background_viewer = None       # viewer for background
         self.scale = self.screen_width/self.court_lx
@@ -109,7 +109,7 @@ class StePFilterBaseEnv(gym.Env):
         self.max_q = 5000
 
         #-------------------------Particle filter-------------------
-        self.pf_num = 3000 #150??
+        self.pf_num = 200 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         self.pf_low_state_q = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -138,7 +138,7 @@ class StePFilterBaseEnv(gym.Env):
 
         #---------------------------Action--------------------------
         self.delta_t = 1                # 1sec
-        self.agent_v = 6                # 2m/s
+        self.agent_v = 4                # 2m/s
         self.agent_dist = self.agent_v * self.delta_t
         self.action_angle_low = -1
         self.action_angle_high = 1
@@ -146,11 +146,11 @@ class StePFilterBaseEnv(gym.Env):
 
         #--------------------------Ending Criteria--------------------------------
         self.conv_eps = 0.05
-        self.eps = 1.0
+        self.eps = 8.0
         self.conc_eps = 0.2 # minimum conc
 
 
-        self.seed_num = self.seed(8201076236150)
+        self.seed_num = self.seed(8201085478471)
         print("Seed: ", self.seed_num)
         self.particle_filter = ParticleFilter(self)
 
@@ -437,6 +437,8 @@ class StePFilterBaseEnv(gym.Env):
                         conc = max_conc
                         color = cm.jet(255) # 255 is maximum number
 #                        particle.set_color(color)
+                        plume.set_color(color[0], color[1], color[2])
+                        self.background_viewer.add_onetime(plume)
 
 #                        self.background_viewer.add_onetime(DrawPatch(x, y, width, height, color))
                     elif conc > 0.5: #self.conc_eps: #just for plot (_gas_conc already includes conc_eps)
@@ -444,11 +446,14 @@ class StePFilterBaseEnv(gym.Env):
 #                        color_cal = conc/max_conc * 255
                         if color_cal < 0: color_cal = 0
                         color = cm.jet(color_cal)
-                    else:
-                        color = [1, 1, 1]
+                        plume.set_color(color[0], color[1], color[2])
+                        self.background_viewer.add_onetime(plume)
 
-                    plume.set_color(color[0], color[1], color[2])
-                    self.background_viewer.add_onetime(plume)
+#                    else:
+#                        color = [1, 1, 1]
+
+#                    plume.set_color(color[0], color[1], color[2])
+#                    self.background_viewer.add_onetime(plume)
 
 #                        color = cm.jet(round((conc+1)/(max_conc+1)*255) )
 #                        self.background_viewer.add_onetime(DrawPatch(x, y, width, height, color))

@@ -3,14 +3,14 @@ from gym import error, spaces, utils
 from gym.utils import seeding
 import numpy as np
 import math
-from gym_ste_v2.envs.pf_guide.ste_pf_guide_base import *
+from gym_ste_v2.envs.pf_cent_gmm_conv.base import *
 
 from gym.envs.registration import register
 
 from datetime import datetime
 
 
-class StePfGuideExtEnv(BaseEnv):
+class StePfCentGmmConvExtEnv(BaseEnv):
     metadata = {'render.modes': ['human', 'ansi'],
                 'video.frames_per_second': 30}
 
@@ -45,7 +45,7 @@ class StePfGuideExtEnv(BaseEnv):
         # self.wind_mean_phi = 310        # mean wind direction [degree]
 
 register(
-    id='StePfGuideExtEnv-v0',
-    entry_point='gym_ste_v2.envs.pf_guide:StePfGuideExtEnv',
+    id='StePfCentGmmConvExtEnv-v0',
+    entry_point='gym_ste_v2.envs.pf_cent_gmm_conv:StePfCentGmmConvExtEnv',
 )
 
