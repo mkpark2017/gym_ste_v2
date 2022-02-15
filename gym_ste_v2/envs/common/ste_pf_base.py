@@ -66,8 +66,8 @@ class StePFilterBaseEnv(gym.Env):
         self.conc_max = 100
 
         # rendering
-        self.screen_height = 250
-        self.screen_width = 250
+        self.screen_height = 600
+        self.screen_width = 600
         self.viewer = None                  # viewer for render()
         self.background_viewer = None       # viewer for background
         self.scale = self.screen_width/self.court_lx
@@ -109,7 +109,7 @@ class StePFilterBaseEnv(gym.Env):
         self.max_q = 5000
 
         #-------------------------Particle filter-------------------
-        self.pf_num = 200 #150??
+        self.pf_num = 3000 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         self.pf_low_state_q = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -138,7 +138,7 @@ class StePFilterBaseEnv(gym.Env):
 
         #---------------------------Action--------------------------
         self.delta_t = 1                # 1sec
-        self.agent_v = 4                # 2m/s
+        self.agent_v = 6                # 2m/s
         self.agent_dist = self.agent_v * self.delta_t
         self.action_angle_low = -1
         self.action_angle_high = 1
@@ -146,11 +146,11 @@ class StePFilterBaseEnv(gym.Env):
 
         #--------------------------Ending Criteria--------------------------------
         self.conv_eps = 0.05
-        self.eps = 8.0
+        self.eps = 1.0
         self.conc_eps = 0.2 # minimum conc
 
 
-        self.seed_num = self.seed(8201033333333)
+        self.seed_num = self.seed(8201076236150)
         print("Seed: ", self.seed_num)
         self.particle_filter = ParticleFilter(self)
 
@@ -430,17 +430,28 @@ class StePFilterBaseEnv(gym.Env):
 
                     x = xx*self.scale
                     y = yy*self.scale
+                    plume = rendering.make_circle(4.5)
+                    plume.add_attr(rendering.Transform(translation=(x, y)))
+
                     if conc > max_conc: #set maximum value for visualization
                         conc = max_conc
                         color = cm.jet(255) # 255 is maximum number
-                        self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
-                    elif conc > self.conc_eps: #just for plot (_gas_conc already includes conc_eps)
+#                        particle.set_color(color)
+
+#                        self.background_viewer.add_onetime(DrawPatch(x, y, width, height, color))
+                    elif conc > 0.5: #self.conc_eps: #just for plot (_gas_conc already includes conc_eps)
                         color_cal = round( (math.exp(math.log(conc+1)/math.log(max_conc+1))-1) * 255)
 #                        color_cal = conc/max_conc * 255
                         if color_cal < 0: color_cal = 0
                         color = cm.jet(color_cal)
+                    else:
+                        color = [1, 1, 1]
+
+                    plume.set_color(color[0], color[1], color[2])
+                    self.background_viewer.add_onetime(plume)
+
 #                        color = cm.jet(round((conc+1)/(max_conc+1)*255) )
-                        self.background_viewer.add_geom(DrawPatch(x, y, width, height, color))
+#                        self.background_viewer.add_onetime(DrawPatch(x, y, width, height, color))
 #                    conc_mat_temp.append(round(conc,2))
 #                conc_mat.append(conc_mat_temp)
 #            print(conc_mat)
@@ -462,11 +473,11 @@ class StePFilterBaseEnv(gym.Env):
 
             #track the way, the agent has gone
             track_way = rendering.make_polyline(np.dot(self.positions, self.scale))
-            track_way.set_linewidth(4)
+            track_way.set_linewidth(6)
             self.viewer.add_onetime(track_way)
 
             # draw the agent
-            agent = rendering.make_circle(5)
+            agent = rendering.make_circle(10)
             agent_trans = rendering.Transform()
             agent.add_attr(agent_trans)
             agent.set_color(0, 0, 1)
@@ -474,14 +485,14 @@ class StePFilterBaseEnv(gym.Env):
 
             agent_trans.set_translation(self.agent_x * self.scale, self.agent_y * self.scale)
 
-            goal = rendering.make_circle(5)
-            goal.add_attr(rendering.Transform(translation=(self.goal_x*self.scale, self.goal_y*self.scale)))
-            goal.set_color(0, 0, 0)
-            self.viewer.add_onetime(goal)
+#            goal = rendering.make_circle(10)
+#            goal.add_attr(rendering.Transform(translation=(self.goal_x*self.scale, self.goal_y*self.scale)))
+#            goal.set_color(0, 0, 0)
+#            self.viewer.add_onetime(goal)
 
 #            print(self.measures)
             for i in range(len(self.measures)):
-                measure = rendering.make_circle(math.pow(self.measures[i],1/3)*3)
+                measure = rendering.make_circle(math.pow(self.measures[i],1/3)*6)
                 measure.add_attr(rendering.Transform(translation=(self.agent_xs[i]*self.scale, self.agent_ys[i]*self.scale)))
 #                measure.add_attr(self.agent_trans)
                 measure.set_color(255, 0, 0)
@@ -501,11 +512,18 @@ class StePFilterBaseEnv(gym.Env):
                         particle = rendering.make_circle(3)
                         particle.add_attr(rendering.Transform(translation=(self.gmm_data[i][j][0]*self.scale,
                                                                            self.gmm_data[i][j][1]*self.scale)))
-                        particle.set_color(i*.5, .3*i, .1*i)
+
+                        if i==1:
+                            particle.set_color(0.8, 0.8, 0)
+                        elif i==2:
+                            particle.set_color(0.8, 0.1, 0.9)
+                        else:
+                            particle.set_color(1, 0.4, 0.1)
+#                        particle.set_color(i*.6, .2*i, .1*i)
                         self.viewer.add_onetime(particle)
 
 #                    gmm_particle = rendering.make_circle(5)
-                    gmm_particle = rendering.make_capsule(8, 4)
+                    gmm_particle = rendering.make_capsule(16, 16)
                     gmm_particle.add_attr(rendering.Transform(translation=(self.gmm_mean_x[i]*self.scale, self.gmm_mean_y[i]*self.scale)))
 #                    gmm_particle.set_color(i*.5-0.2, .3*i-0.2, .1*i-0.2)
                     gmm_particle.set_color(0,1,0)
@@ -530,6 +548,10 @@ class StePFilterBaseEnv(gym.Env):
                 est_location.set_color(0.1, .3, .5)
                 self.viewer.add_onetime(est_location) 
 
+            goal = rendering.make_circle(10)
+            goal.add_attr(rendering.Transform(translation=(self.goal_x*self.scale, self.goal_y*self.scale)))
+            goal.set_color(0, 0, 0)
+            self.viewer.add_onetime(goal)
 
 #            text = 'This is a test but it is not visible'
 #            label = pyglet.text.Label(text, font_size=36,

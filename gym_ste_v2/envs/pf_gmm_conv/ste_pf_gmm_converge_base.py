@@ -42,7 +42,7 @@ class BaseEnv(StePFilterBaseEnv):
         self.observation_space = spaces.Box(self.obs_low_state, self.obs_high_state, dtype=np.float32)
 
         self.gmm_num = 3
-        self.gmm = GaussianMixture(n_components=self.gmm_num, max_iter=20)
+        self.gmm = GaussianMixture(n_components=self.gmm_num, max_iter=20, random_state=round(self.seed_num/10000))
         #self.gmm_mean_x = np.ones(self.gmm_num)
         #self.gmm_mean_y = np.ones(self.gmm_num)
         #self.gmm_cov_x = np.ones(self.gmm_num)
