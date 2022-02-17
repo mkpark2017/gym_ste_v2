@@ -518,12 +518,18 @@ class StePFilterBaseEnv(gym.Env):
                         particle.add_attr(rendering.Transform(translation=(self.gmm_data[i][j][0]*self.scale,
                                                                            self.gmm_data[i][j][1]*self.scale)))
 
-                        if i==1:
+                        if i==0:
                             particle.set_color(0.8, 0.8, 0)
-                        elif i==2:
+                        elif i==1:
                             particle.set_color(0.8, 0.1, 0.9)
-                        else:
+                        elif i==2:
                             particle.set_color(1, 0.4, 0.1)
+                        elif i==3:
+                            particle.set_color(0.0, 0.8, 0.8)
+                        elif i==4:
+                            particle.set_color(0.1, 0.1, 0.9)
+                        else:
+                            particle.set_color(1, 0.4, 0.5)
 #                        particle.set_color(i*.6, .2*i, .1*i)
                         self.viewer.add_onetime(particle)
 
