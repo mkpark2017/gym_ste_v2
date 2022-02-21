@@ -282,12 +282,12 @@ class StePFilterBaseEnv(gym.Env):
             reward = 0.1 #+1
             self.dur_t = 0
         else:
-            reward = 0
+            reward = -1
             self.dur_t += 1
         return reward
 
     def _border_reward(self):
-        reward = -1 #-100
+        reward = 0 #-100
         return reward
 
     def _set_init_state(self):
