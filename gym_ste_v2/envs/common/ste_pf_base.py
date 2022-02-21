@@ -109,7 +109,7 @@ class StePFilterBaseEnv(gym.Env):
         self.max_q = 5000
 
         #-------------------------Particle filter-------------------
-        self.pf_num = 2000 #150??
+        self.pf_num = 200 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         self.pf_low_state_q = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -146,7 +146,7 @@ class StePFilterBaseEnv(gym.Env):
 
         #--------------------------Ending Criteria--------------------------------
         self.conv_eps = 0.05
-        self.eps = 1.0
+        self.eps = 4.0
         self.conc_eps = 0.2 # minimum conc
 
 
