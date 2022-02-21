@@ -25,7 +25,7 @@ class StePfConvInfotaxisExtMatEnv(BaseEnv):
         self.gas_d_list = 5 + mat_file['gas_d_rate']*10
         self.gas_t_list = 500 + mat_file['gas_t_rate']*1000
         self.gas_q_list = 1000 + mat_file['gas_q_rate']*2000
-        self.wind_mean_phi_list = mat_file['wind_mean_phi_rate']*360 - 180
+        self.wind_mean_phi_list = mat_file['wind_mean_phi_rate']*360
         self.wind_mean_speed_list = mat_file['wind_mean_speed_rate']*4
 
         self.env_list = 0
@@ -46,6 +46,7 @@ class StePfConvInfotaxisExtMatEnv(BaseEnv):
         self.gas_t = self.gas_t_list[self.env_list][0]            # gas life time [1000se$
         self.gas_q = self.gas_q_list[self.env_list][0]           # gas strength
         
+#        wind_angle = math.atan2(self.goal_y - self.court_ly/2, self.goal_x - self.court_lx/2)/math.pi * 180 + 270
         self.wind_mean_phi = self.wind_mean_phi_list[self.env_list][0]        # mean wind direction
         self.wind_mean_speed = self.wind_mean_speed_list[self.env_list][0]
         

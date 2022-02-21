@@ -56,7 +56,7 @@ class StePFilterBaseEnv(gym.Env):
         self.last_measure = 0
         self.court_lx = 60              # the size of the environment
         self.court_ly = 60              # the size of the environment
-        self.max_step = 300
+        self.max_step = 150
         self.gmm_num = 0
 
         # gas sensing
@@ -109,7 +109,7 @@ class StePFilterBaseEnv(gym.Env):
         self.max_q = 5000
 
         #-------------------------Particle filter-------------------
-        self.pf_num = 200 #150??
+        self.pf_num = 2000 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         self.pf_low_state_q = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -146,7 +146,7 @@ class StePFilterBaseEnv(gym.Env):
 
         #--------------------------Ending Criteria--------------------------------
         self.conv_eps = 0.05
-        self.eps = 8.0
+        self.eps = 1.0
         self.conc_eps = 0.2 # minimum conc
 
 
@@ -163,6 +163,11 @@ class StePFilterBaseEnv(gym.Env):
         wind_speed_fluc = 0.1
         wind_dir = self.np_random.uniform(low=(self.wind_mean_phi-wind_degree_fluc)*math.pi/180, 
                                          high=(self.wind_mean_phi+wind_degree_fluc)*math.pi/180)
+
+        if wind_dir < 0:
+            wind_dir += 2*math.pi
+        elif wind_dir > 2*math.pi:
+            wind_dir -= 2*math.pi
         # wind_dir [radian]
         wind_speed = self.np_random.uniform(low=self.wind_mean_speed-wind_speed_fluc, 
                                             high=self.wind_mean_speed+wind_speed_fluc)
@@ -183,7 +188,7 @@ class StePFilterBaseEnv(gym.Env):
             conc = 0
 
         return conc
-
+    '''
     def _gas_measure(self):
         conc = self._gas_conc(self.agent_x, self.agent_y)
         conc_env = self.np_random.normal(conc,self.env_sig)
@@ -195,6 +200,23 @@ class StePFilterBaseEnv(gym.Env):
             gas_measure = self.np_random.normal(conc_env, conc_env*self.sensor_sig_m)
 
         return gas_measure
+    '''
+
+    def _gas_measure(self):
+        conc = self._gas_conc(self.agent_x, self.agent_y)
+        env_sig = 0.1
+        sensor_sig_m = 0.05
+
+        conc_env = self.np_random.normal(conc,env_sig)
+        #print(self.sensor_sig_m)
+        while conc_env < 0:
+            conc_env = self.np_random.normal(conc,env_sig)
+        gas_measure = self.np_random.normal(conc_env, conc_env*sensor_sig_m)
+        while gas_measure < 0:
+            gas_measure = self.np_random.normal(conc_env, conc_env*sensor_sig_m)
+
+        return gas_measure
+
 
 
     def _observation(self):

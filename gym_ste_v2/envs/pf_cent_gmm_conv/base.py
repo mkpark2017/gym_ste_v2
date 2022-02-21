@@ -146,8 +146,8 @@ class BaseEnv(StePFilterBaseEnv):
         #done = bool(self._distance(self.agent_x, self.agent_y) <= self.eps)
 
         rew = 0
-        if self.outborder: # Agent get out to search area
-           rew += self._border_reward()
+#        if self.outborder: # Agent get out to search area
+#           rew += self._border_reward()
 
         pf_center = np.array([np.mean(self.pf_x), np.mean(self.pf_y)])
         nearby = math.sqrt( pow(pf_center[0]-self.goal_x,2) + pow(pf_center[1]-self.goal_y,2) )
@@ -161,8 +161,8 @@ class BaseEnv(StePFilterBaseEnv):
         terminate_done = bool(self.count_actions >= self.max_step)
 
         # break if more than max_step actions taken
-        done = bool(self.count_actions >= self.max_step or converge_done or self.outborder)
-#        done = bool(self.count_actions >= self.max_step or converge_done)
+#        done = bool(self.count_actions >= self.max_step or converge_done or self.outborder)
+        done = bool(self.count_actions >= self.max_step or converge_done)
 
         # track, where agent was
         self.positions.append([self.agent_x, self.agent_y])

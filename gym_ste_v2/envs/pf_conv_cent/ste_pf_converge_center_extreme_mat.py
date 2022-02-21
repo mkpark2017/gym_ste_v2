@@ -46,6 +46,7 @@ class StePfConvCentExtMatEnv(BaseEnv):
         self.gas_t = self.gas_t_list[self.env_list][0]            # gas life time [1000se$
         self.gas_q = self.gas_q_list[self.env_list][0]           # gas strength
         
+#        wind_angle = math.atan2(self.goal_y - self.court_ly/2, self.goal_x - self.court_lx/2)/math.pi * 180 + 270
         self.wind_mean_phi = self.wind_mean_phi_list[self.env_list][0]        # mean wind direction
         self.wind_mean_speed = self.wind_mean_speed_list[self.env_list][0]
         
