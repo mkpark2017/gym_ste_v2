@@ -60,8 +60,8 @@ class StePFilterBaseEnv(gym.Env):
         self.gmm_num = 0
 
         # gas sensing
-        self.env_sig = 0.2 #0.4
-        self.sensor_sig_m = 0.1 #0.2
+        self.env_sig = 0.4 #0.4
+        self.sensor_sig_m = 0.2 #0.2
         self.conc_eps = 0.2 # minimum conc
         self.conc_max = 100
 
@@ -188,7 +188,7 @@ class StePFilterBaseEnv(gym.Env):
             conc = 0
 
         return conc
-    '''
+    
     def _gas_measure(self):
         conc = self._gas_conc(self.agent_x, self.agent_y)
         conc_env = self.np_random.normal(conc,self.env_sig)
@@ -200,8 +200,8 @@ class StePFilterBaseEnv(gym.Env):
             gas_measure = self.np_random.normal(conc_env, conc_env*self.sensor_sig_m)
 
         return gas_measure
+    
     '''
-
     def _gas_measure(self):
         conc = self._gas_conc(self.agent_x, self.agent_y)
         env_sig = 0.1
@@ -216,7 +216,7 @@ class StePFilterBaseEnv(gym.Env):
             gas_measure = self.np_random.normal(conc_env, conc_env*sensor_sig_m)
 
         return gas_measure
-
+    '''
 
 
     def _observation(self):
