@@ -50,6 +50,12 @@ class StePFilterBaseEnv(gym.Env):
                 'video.frames_per_second': 30}
 
     def __init__(self):
+        # For different simulation Setting
+        self.env_sig = 0.2 #0.4
+        self.sensor_sig_m = 0.1 #0.2
+        self.pf_num = 2000 #150??
+        self.agent_v = 2                # 2m/s
+
         #--------------------------Common Env----------------------------
         self.debug = False
 
@@ -60,8 +66,8 @@ class StePFilterBaseEnv(gym.Env):
         self.gmm_num = 0
 
         # gas sensing
-        self.env_sig = 0.4 #0.4
-        self.sensor_sig_m = 0.2 #0.2
+#        self.env_sig = 0.2 #0.4
+#        self.sensor_sig_m = 0.1 #0.2
         self.conc_eps = 0.2 # minimum conc
         self.conc_max = 100
 
@@ -109,7 +115,7 @@ class StePFilterBaseEnv(gym.Env):
         self.max_q = 5000
 
         #-------------------------Particle filter-------------------
-        self.pf_num = 200 #150??
+#        self.pf_num = 2000 #150??
         self.pf_low_state_x = np.zeros(self.pf_num) # particle filter (x1,x2,x3, ...)
         self.pf_low_state_y = np.zeros(self.pf_num) # particle filter (y1,y2,y3, ...)
         self.pf_low_state_q = np.zeros(self.pf_num) # particle filter (q1,q2,q3, ...)
@@ -138,7 +144,7 @@ class StePFilterBaseEnv(gym.Env):
 
         #---------------------------Action--------------------------
         self.delta_t = 1                # 1sec
-        self.agent_v = 4                # 2m/s
+#        self.agent_v = 4                # 2m/s
         self.agent_dist = self.agent_v * self.delta_t
         self.action_angle_low = -1
         self.action_angle_high = 1
@@ -146,11 +152,11 @@ class StePFilterBaseEnv(gym.Env):
 
         #--------------------------Ending Criteria--------------------------------
         self.conv_eps = 0.05
-        self.eps = 4.0
+        self.eps = 1.0
         self.conc_eps = 0.2 # minimum conc
 
 
-        self.seed_num = self.seed(8201085478471)
+        self.seed_num = self.seed(8201099999999)
         print("Seed: ", self.seed_num)
         self.particle_filter = ParticleFilter(self)
 
@@ -188,7 +194,7 @@ class StePFilterBaseEnv(gym.Env):
             conc = 0
 
         return conc
-    
+    '''
     def _gas_measure(self):
         conc = self._gas_conc(self.agent_x, self.agent_y)
         conc_env = self.np_random.normal(conc,self.env_sig)
@@ -200,8 +206,8 @@ class StePFilterBaseEnv(gym.Env):
             gas_measure = self.np_random.normal(conc_env, conc_env*self.sensor_sig_m)
 
         return gas_measure
-    
     '''
+    
     def _gas_measure(self):
         conc = self._gas_conc(self.agent_x, self.agent_y)
         env_sig = 0.1
@@ -216,7 +222,7 @@ class StePFilterBaseEnv(gym.Env):
             gas_measure = self.np_random.normal(conc_env, conc_env*sensor_sig_m)
 
         return gas_measure
-    '''
+    
 
 
     def _observation(self):
@@ -282,12 +288,12 @@ class StePFilterBaseEnv(gym.Env):
             reward = 0.1 #+1
             self.dur_t = 0
         else:
-            reward = -1
+            reward = 0
             self.dur_t += 1
         return reward
 
     def _border_reward(self):
-        reward = 0 #-100
+        reward = -1 #-100
         return reward
 
     def _set_init_state(self):
